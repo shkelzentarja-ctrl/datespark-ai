@@ -575,17 +575,29 @@ function submitAuth(){
   err.style.display='none';
   if(!u||!p){err.textContent='Please fill in all fields';err.style.display='block';return;}
   var endpoint=authMode==='login'?'/api/login':'/api/register';
-  fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
-    .then(function(r){return r.json();})
-    .then(function(data){
-      if(data.error){err.textContent=data.error;err.style.display='block';return;}
-      currentUser=data.username;
-      shareCode=data.share_code;
-      saved=data.saved||[];
-      history=data.history||[];
-      enterApp();
-    })
-    .catch(function(e){err.textContent='Connection error. Try again.';err.style.display='block';});
+  var btn=document.getElementById('auth-submit-btn');
+  btn.textContent='...';btn.disabled=true;
+  fetch(endpoint,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u,password:p})
+  }).then(function(r){
+    return r.json();
+  }).then(function(data){
+    btn.textContent=authMode==='login'?'Login':'Register';
+    btn.disabled=false;
+    if(data.error){err.textContent=data.error;err.style.display='block';return;}
+    currentUser=data.username;
+    shareCode=data.share_code;
+    saved=data.saved||[];
+    history=data.history||[];
+    enterApp();
+  }).catch(function(){
+    btn.textContent=authMode==='login'?'Login':'Register';
+    btn.disabled=false;
+    err.textContent='Connection error. Try again.';
+    err.style.display='block';
+  });
 }
 
 function continueGuest(){ currentUser=null; enterApp(); }
