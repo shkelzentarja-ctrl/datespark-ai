@@ -101,7 +101,7 @@ def get_season():
 def call_gemini(prompt):
     try:
         body = {"contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.9, "maxOutputTokens": 1024}}
+                "generationConfig": {"temperature": 0.9, "maxOutputTokens": 3000}}
         r = requests.post(GEMINI_URL, json=body, timeout=30)
         txt = r.json()["candidates"][0]["content"]["parts"][0]["text"]
         # Clean all possible markdown formatting
