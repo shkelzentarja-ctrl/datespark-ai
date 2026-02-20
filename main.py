@@ -276,7 +276,8 @@ def ai_chat():
             user = db.execute("SELECT chat_history FROM users WHERE username=?", (u,)).fetchone()
             chat_history = json.loads(user["chat_history"]) if user else []
     ctx = "\n".join([f"{'User' if m['role']=='user' else 'Assistant'}: {m['text']}" for m in chat_history[-6:]])
-    prompt = (f'You are a friendly date idea assistant. Respond in {"English" if lang=="en" else "Spanish" if lang=="es" else "French" if lang=="fr" else "German"}. '
+    prompt = (f'You are a friendly date idea assistant. Respond in '
+              f'{"English" if lang=="en" else "Spanish" if lang=="es" else "French" if lang=="fr" else "German"}. '
               f'Previous conversation:\n{ctx}\nUser: {msg}\n'
               f'Give a helpful, fun, concise response about date ideas. Keep it under 100 words.')
     result = call_gemini(prompt)
