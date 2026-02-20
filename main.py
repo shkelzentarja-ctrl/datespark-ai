@@ -975,16 +975,26 @@ function showAuthScreen(){
 
 // ── Init ───────────────────────────────────────────────────
 async function init(){
-  const r=await fetch('/api/ideas'); IDEAS=await r.json();
-  buildDeck(); renderCatPills(); renderSwipeCards();
-  loadSeasonal(); renderMatches(); updateNavBadges();
+  try {
+    const r = await fetch('/api/ideas');
+    IDEAS = await r.json();
+    buildDeck();
+    renderCatPills();
+    renderSwipeCards();
+    await loadSeasonal();
+    renderMatches();
+    updateNavBadges();
+  } catch(e) {
+    console.error('Init error:', e);
+  }
 }
 
 function buildDeck(cat='all'){
-  activeCat=cat;
-  let all=Object.entries(IDEAS).flatMap(([c,arr])=>arr.map(i=>({...i,cat:c})));
-  deck=cat==='all'?all:all.filter(i=>i.cat===cat);
-  deck.sort(()=>Math.random()-0.5);
+  activeCat = cat;
+  if(!IDEAS || !Object.keys(IDEAS).length) return;
+  let all = Object.entries(IDEAS).flatMap(([c,arr]) => arr.map(i => ({...i, cat:c})));
+  deck = cat==='all' ? all : all.filter(i => i.cat === cat);
+  deck.sort(() => Math.random() - 0.5);
 }
 
 // ── Cat Pills ──────────────────────────────────────────────
@@ -1490,17 +1500,21 @@ function showToast(msg){
 }
 
 // ── Tab Navigation ─────────────────────────────────────────
-function showTab(name,btn){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('screen-'+name).classList.add('active');
-  btn.classList.add('active');
+function showTab(name, btn){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  const screen = document.getElementById('screen-'+name);
+  if(screen) screen.classList.add('active');
+  if(btn) btn.classList.add('active');
+  // Reload content for each tab
   if(name==='saved') renderSaved();
   if(name==='history') renderHistory();
   if(name==='couples') renderMatches();
   if(name==='stats') renderStats();
   if(name==='gallery') renderGallery();
   if(name==='album') loadAlbum();
+  if(name==='seasonal') loadSeasonal();
+  if(name==='spark'){ renderCatPills(); renderSwipeCards(); }
 }
 </script>
 </body>
