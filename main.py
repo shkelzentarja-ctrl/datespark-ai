@@ -46,8 +46,6 @@ def init_db():
                 password TEXT NOT NULL,
                 share_code TEXT NOT NULL,
                 chat_history TEXT DEFAULT '[]',
-                avatar TEXT DEFAULT NULL,
-                couple_partner TEXT DEFAULT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -67,16 +65,6 @@ def init_db():
                 memory TEXT NOT NULL,
                 logged_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (username) REFERENCES users(username)
-            )
-        """)
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS couple_photos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                couple_code TEXT NOT NULL,
-                username TEXT NOT NULL,
-                photo TEXT NOT NULL,
-                caption TEXT DEFAULT '',
-                uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
         db.commit()
@@ -240,66 +228,6 @@ def login():
     session["user"] = u
     return jsonify({"success": True, "username": u, "share_code": user["share_code"], "saved": saved, "history": history})
 
-@app.route("/api/avatar", methods=["POST"])
-def update_avatar():
-    u = session.get("user")
-    if not u: return jsonify({"error": "Not logged in"}), 401
-    photo = request.json.get("photo")
-    with get_db() as db:
-        db.execute("UPDATE users SET avatar=? WHERE username=?", (photo, u))
-        db.commit()
-    return jsonify({"success": True})
-
-@app.route("/api/couple/photos", methods=["GET"])
-def get_couple_photos():
-    u = session.get("user")
-    if not u: return jsonify({"error": "Not logged in"}), 401
-    with get_db() as db:
-        user = db.execute("SELECT share_code FROM users WHERE username=?", (u,)).fetchone()
-        if not user: return jsonify([])
-        photos = db.execute(
-            "SELECT * FROM couple_photos WHERE couple_code=? ORDER BY uploaded_at DESC",
-            (user["share_code"],)
-        ).fetchall()
-    return jsonify([dict(p) for p in photos])
-
-@app.route("/api/couple/photos", methods=["POST"])
-def add_couple_photo():
-    u = session.get("user")
-    if not u: return jsonify({"error": "Not logged in"}), 401
-    d = request.json
-    photo = d.get("photo")
-    caption = d.get("caption", "")
-    with get_db() as db:
-        user = db.execute("SELECT share_code FROM users WHERE username=?", (u,)).fetchone()
-        db.execute(
-            "INSERT INTO couple_photos (couple_code, username, photo, caption) VALUES (?,?,?,?)",
-            (user["share_code"], u, photo, caption)
-        )
-        db.commit()
-    return jsonify({"success": True})
-
-@app.route("/api/couple/photos/<int:photo_id>", methods=["DELETE"])
-def delete_couple_photo(photo_id):
-    u = session.get("user")
-    if not u: return jsonify({"error": "Not logged in"}), 401
-    with get_db() as db:
-        db.execute("DELETE FROM couple_photos WHERE id=? AND username=?", (photo_id, u))
-        db.commit()
-    return jsonify({"success": True})
-
-@app.route("/api/gallery")
-def get_gallery():
-    u = session.get("user")
-    if not u: return jsonify({"error": "Not logged in"}), 401
-    with get_db() as db:
-        memories = [json.loads(r["memory"]) for r in db.execute(
-            "SELECT memory FROM date_history WHERE username=? ORDER BY logged_at DESC", (u,)
-        ).fetchall()]
-    photos = [{"photo": m["photo"], "title": m["title"], "date": m["date"], "rating": m.get("rating",5)}
-              for m in memories if m.get("photo")]
-    return jsonify(photos)
-
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.pop("user", None)
@@ -347,47 +275,6 @@ def get_userdata():
     return jsonify({"saved": saved, "history": history, "share_code": user["share_code"]})
 
 # ── AI Routes ─────────────────────────────────────────────────
-@app.route("/api/translate-ideas", methods=["POST"])
-def translate_ideas():
-    d = request.json
-    ideas = d.get("ideas", [])
-    lang = d.get("lang", "en")
-    lang_names = {"es": "Spanish", "fr": "French", "de": "German"}
-    if lang == "en" or lang not in lang_names:
-        return jsonify(ideas)
-    lang_name = lang_names[lang]
-    prompt = (f'Translate these date ideas to {lang_name}. '
-              f'Only translate "title" and "desc" fields, keep all other fields exactly the same. '
-              f'Return ONLY a valid JSON array, no markdown: {json.dumps(ideas)}')
-    result = call_gemini(prompt)
-    if not result:
-        return jsonify(ideas)
-    try:
-        return jsonify(json.loads(result))
-    except:
-        return jsonify(ideas)
-
-@app.route("/api/ai/generate-ideas", methods=["POST"])
-def ai_generate_ideas():
-    d = request.json
-    cat = d.get("cat", "surprise")
-    exclude = d.get("exclude", [])
-    u = session.get("user")
-    done = []
-    if u:
-        with get_db() as db:
-            done = [json.loads(r["memory"])["title"] for r in db.execute("SELECT memory FROM date_history WHERE username=?", (u,)).fetchall()]
-    exclude_all = list(set(exclude + done))
-    prompt = (f'Generate 6 creative and unique {cat} date ideas for couples. '
-              f'{"Avoid these: " + ", ".join(exclude_all[:10]) + "." if exclude_all else ""} '
-              f'Make them fresh, fun and specific. '
-              f'Return ONLY a JSON array, no markdown: '
-              f'[{{"title":"...","desc":"one engaging sentence","emoji":"...","duration":"...","cost":"$/$/$$/$$/Free","cat":"{cat}"}}]')
-    result = call_gemini(prompt)
-    if not result: return jsonify({"error": "AI unavailable"}), 500
-    try: return jsonify(json.loads(result))
-    except: return jsonify({"error": "Parse error"}), 500
-
 @app.route("/api/ai/quick", methods=["POST"])
 def ai_quick():
     topic = request.json.get("topic","")
@@ -484,34 +371,18 @@ HTML = """
 <meta name="apple-mobile-web-app-title" content="DateSpark">
 <style>
 :root{--bg:#0d0d0d;--surface:#1a1a2e;--text:#ffffff;--subtext:#9ca3af;--border:#ffffff15;--input:#1f2937;--card-overlay:rgba(0,0,0,0.3)}
-.light{--bg:#f0f0f5;--surface:#ffffff;--text:#111827;--subtext:#6b7280;--border:#d1d5db;--input:#e5e7eb;--card-overlay:rgba(0,0,0,0.15)}
-.light body{background:#f0f0f5}
-.light .surface{background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
-.light input,.light textarea,.light select{background:#e5e7eb;color:#111827;border-color:#d1d5db}
-.light nav{background:#ffffff;box-shadow:0 -2px 8px rgba(0,0,0,0.06)}
-.light header{background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
-.light .pill{background:#e5e7eb;color:#374151}
-.light .pill.active{background:#f43f5e;color:#fff}
-.light .swipe-btn{background:#ffffff;border-color:#d1d5db}
-.light .memory-card{background:#ffffff;border-color:#e5e7eb}
-.light .stat-card{background:#ffffff;border-color:#e5e7eb}
-.light .recommend-card{background:#ffffff}
-.light .chat-box{background:#f0f0f5}
-.light .chat-msg.ai{background:#e5e7eb;color:#111827}
-.light .modal-box{background:#ffffff}
-.light .rating-btn{background:#e5e7eb;color:#111827}
-.light .code-display{background:#f0f0f5;color:#f43f5e}
+.light{--bg:#f9fafb;--surface:#ffffff;--text:#111827;--subtext:#6b7280;--border:#e5e7eb;--input:#f3f4f6;--card-overlay:rgba(0,0,0,0.15)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;transition:background-color .3s,color .3s}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
 header{background:var(--surface);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
 header h1{font-size:18px;color:#f43f5e;font-weight:900}
 .header-right{display:flex;gap:8px;align-items:center}
 .icon-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:4px;border-radius:8px}
-nav{background:var(--surface);display:flex;border-top:1px solid var(--border);position:sticky;bottom:0;z-index:100;overflow-x:auto;height:58px}
-nav button{flex:1;min-width:44px;padding:12px 2px;background:none;border:none;color:var(--subtext);font-size:20px;cursor:pointer;transition:color .2s;white-space:nowrap}
+nav{background:var(--surface);display:flex;border-top:1px solid var(--border);position:sticky;bottom:0;z-index:100;overflow-x:auto}
+nav button{flex:1;min-width:44px;padding:10px 2px;background:none;border:none;color:var(--subtext);font-size:16px;cursor:pointer;transition:color .2s;white-space:nowrap}
 nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .screen{display:none;flex:1;flex-direction:column;padding:14px;gap:12px;overflow-y:auto;padding-bottom:80px}
-.screen.active{display:flex!important}
+.screen.active{display:flex}
 .card{border-radius:20px;padding:18px;position:relative;overflow:hidden;margin-bottom:10px}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
 .card-emoji{font-size:36px;line-height:1}
@@ -533,8 +404,8 @@ nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .pills::-webkit-scrollbar{display:none}
 .pill{flex-shrink:0;padding:7px 12px;border-radius:20px;border:none;background:var(--input);color:var(--text);font-size:11px;font-weight:700;cursor:pointer}
 .pill.active{background:#f43f5e;color:#fff;transform:scale(1.05)}
-.swipe-area{position:relative;height:260px;margin-bottom:8px}
-.swipe-card{position:absolute;inset:0;border-radius:22px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none;overflow:hidden}
+.swipe-area{position:relative;height:230px;margin-bottom:8px}
+.swipe-card{position:absolute;inset:0;border-radius:22px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none}
 .swipe-card.back1{transform:scale(0.95) translateY(8px);opacity:.7;z-index:1;pointer-events:none}
 .swipe-card.back2{transform:scale(0.90) translateY(16px);opacity:.4;z-index:0;pointer-events:none}
 .swipe-card.front{z-index:2}
@@ -651,28 +522,6 @@ input:focus,textarea:focus{border-color:#f43f5e}
   </div>
 </div>
 
-<!-- Gallery Screen -->
-<div id="screen-gallery" class="screen">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-    <div class="label">📸 Date Photo Gallery</div>
-    <span id="gallery-count" style="font-size:11px;color:var(--subtext)"></span>
-  </div>
-  <div class="photo-grid" id="gallery-grid"></div>
-</div>
-
-<!-- Couple Album Screen -->
-<div id="screen-album" class="screen">
-  <div class="surface">
-    <div class="label">💑 Couples Photo Album</div>
-    <p style="font-size:12px;color:var(--subtext);margin-bottom:10px">Share photos with your partner. Both of you can add & view!</p>
-    <input type="file" accept="image/*" id="album-photo-input" onchange="previewAlbumPhoto(this)" style="font-size:12px;padding:6px">
-    <img id="album-preview" style="display:none;width:100%;max-height:150px;object-fit:cover;border-radius:10px;margin-top:8px">
-    <input id="album-caption" placeholder="Add a caption..." style="margin-top:8px">
-    <button class="btn btn-pink" style="margin-top:8px" onclick="uploadAlbumPhoto()">📤 Add to Album</button>
-  </div>
-  <div id="album-list"></div>
-</div>
-
 <!-- Spark Screen -->
 <div id="screen-spark" class="screen">
   <div class="pills" id="cat-pills"></div>
@@ -771,15 +620,13 @@ input:focus,textarea:focus{border-color:#f43f5e}
 
 <nav id="main-nav" style="display:none">
   <button onclick="showTab('spark',this)">⚡</button>
-  <button onclick="showTab('seasonal',this)" id="seasonal-tab-btn">🌺</button>
+  <button onclick="showTab('seasonal',this)" id="seasonal-tab-btn">🌸</button>
   <button onclick="showTab('couples',this)">💑</button>
   <button onclick="showTab('ai',this)">🤖</button>
   <button onclick="showTab('chat',this)">💬</button>
   <button onclick="showTab('stats',this)">📊</button>
   <button onclick="showTab('history',this)">📖</button>
   <button onclick="showTab('saved',this)">❤️</button>
-  <button onclick="showTab('gallery',this)">🖼️</button>
-  <button onclick="showTab('album',this)">💑📸</button>
 </nav>
 
 <div class="confetti-container" id="confetti"></div>
@@ -842,91 +689,13 @@ function toggleTheme(){
 }
 
 // ── Language ───────────────────────────────────────────────
-function setLang(l){
-  lang = l;
-  applyTranslations();
-  translateCurrentIdeas();
-}
-
-async function translateCurrentIdeas(){
-  if(lang === 'en'){
-    // Reset to original English ideas
-    buildDeck(activeCat);
-    renderSwipeCards();
-    return;
-  }
-  // Show loading on card area
-  const area = document.getElementById('swipe-area');
-  area.innerHTML = '<div class="empty"><div style="font-size:28px">🌍</div><p>Translating ideas...</p></div>';
-  // Translate current deck (first 6 cards)
-  const toTranslate = deck.slice(0, 6);
-  try {
-    const r = await fetch('/api/translate-ideas', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ideas: toTranslate, lang})
-    });
-    const translated = await r.json();
-    // Replace start of deck with translated versions
-    deck.splice(0, translated.length, ...translated);
-    renderSwipeCards();
-  } catch(e){
-    renderSwipeCards();
-  }
-}
+function setLang(l){ lang=l; applyTranslations(); }
 function applyTranslations(){
-  // Header
-  document.getElementById('app-title').textContent = t('title');
-
-  // Nav buttons
-  const navKeys = ['spark','seasonal','couples','ai','chat','stats','history','saved'];
-  document.querySelectorAll('nav button').forEach((b,i) => {
-    const base = T.en[navKeys[i]]; // original emoji stays
-    b.textContent = t(navKeys[i]);
+  document.getElementById('app-title').textContent=t('title');
+  document.querySelectorAll('nav button').forEach((b,i)=>{
+    const keys=['spark','seasonal','couples','ai','chat','stats','history','saved'];
+    b.textContent=t(keys[i]);
   });
-
-  // Auth screen
-  const authBtn = document.getElementById('auth-submit-btn');
-  if(authBtn) authBtn.textContent = authMode==='login' ? t('login') : t('register');
-  const toggleLink = document.getElementById('auth-toggle-link');
-  if(toggleLink) toggleLink.textContent = authMode==='login'
-    ? `${t('no_account')} ${t('register')}`
-    : `${t('have_account')} ${t('login')}`;
-  const lblU = document.getElementById('lbl-username');
-  if(lblU) lblU.textContent = t('username');
-  const lblP = document.getElementById('lbl-password');
-  if(lblP) lblP.textContent = t('password');
-
-  // Couples screen
-  const lblCode = document.getElementById('lbl-your-code');
-  if(lblCode) lblCode.textContent = t('your_code');
-  const lblEnter = document.getElementById('lbl-enter-code');
-  if(lblEnter) lblEnter.textContent = t('enter_code');
-  const lblMatches = document.getElementById('lbl-matches');
-  if(lblMatches) lblMatches.textContent = t('matches');
-  const connectBtn = document.getElementById('connect-btn');
-  if(connectBtn) connectBtn.textContent = t('connect');
-
-  // AI screen buttons
-  const quickBtn = document.getElementById('quick-btn');
-  if(quickBtn) quickBtn.textContent = t('quick_idea');
-  const itinBtn = document.getElementById('itin-btn');
-  if(itinBtn) itinBtn.textContent = t('full_itinerary');
-
-  // Chat placeholder
-  const chatInput = document.getElementById('chat-input');
-  if(chatInput) chatInput.placeholder = t('type_message');
-
-  // Re-render dynamic screens to update buttons inside cards
-  const activeScreen = document.querySelector('.screen.active');
-  if(activeScreen){
-    const id = activeScreen.id.replace('screen-','');
-    if(id==='saved') renderSaved();
-    if(id==='history') renderHistory();
-    if(id==='couples') renderMatches();
-    if(id==='spark') renderSwipeCards();
-    if(id==='seasonal') loadSeasonal();
-  }
 }
 
 // ── Auth ───────────────────────────────────────────────────
@@ -959,159 +728,65 @@ function continueGuest(){
 }
 
 function enterApp(){
-  // Hide ALL screens first
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active');
-    s.style.display = 'none';
-  });
-
-  // Show nav
-  document.getElementById('main-nav').style.display = 'flex';
-
-  // Update user badge
-  renderUserBadge(currentUser, null);
-
-  // Set share code
-  document.getElementById('my-code').textContent = shareCode;
-
-  // Show spark screen explicitly
-  const sparkScreen = document.getElementById('screen-spark');
-  sparkScreen.style.display = 'flex';
-  sparkScreen.classList.add('active');
-
-  // Set first nav button active
-  const firstBtn = document.querySelector('#main-nav button');
-  if(firstBtn){
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-    firstBtn.classList.add('active');
-  }
-
-  // Load data
+  document.getElementById('screen-auth').classList.remove('active');
+  document.getElementById('main-nav').style.display='flex';
+  document.getElementById('user-badge-area').innerHTML=currentUser
+    ?`<span class="user-badge">👤 ${currentUser}</span>`
+    :`<button class="icon-btn" onclick="showAuthScreen()" title="Login">🔑</button>`;
+  document.getElementById('my-code').textContent=shareCode;
   init();
+  showTab('spark',document.querySelector('nav button'));
 }
 
 function showAuthScreen(){
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active');
-    s.style.display = 'none';
-  });
-  const authScreen = document.getElementById('screen-auth');
-  authScreen.style.display = 'flex';
-  authScreen.classList.add('active');
-  document.getElementById('main-nav').style.display = 'none';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-auth').classList.add('active');
+  document.getElementById('main-nav').style.display='none';
 }
 
 // ── Init ───────────────────────────────────────────────────
 async function init(){
-  try {
-    const r = await fetch('/api/ideas');
-    IDEAS = await r.json();
-    buildDeck();
-    renderCatPills();
-    renderSwipeCards();
-    await loadSeasonal();
-    renderMatches();
-    updateNavBadges();
-  } catch(e) {
-    console.error('Init error:', e);
-  }
+  const r=await fetch('/api/ideas'); IDEAS=await r.json();
+  buildDeck(); renderCatPills(); renderSwipeCards();
+  loadSeasonal(); renderMatches(); updateNavBadges();
 }
 
 function buildDeck(cat='all'){
-  activeCat = cat;
-  if(!IDEAS || !Object.keys(IDEAS).length) return;
-  let all = Object.entries(IDEAS).flatMap(([c,arr]) => arr.map(i => ({...i, cat:c})));
-  deck = cat==='all' ? all : all.filter(i => i.cat === cat);
-  deck.sort(() => Math.random() - 0.5);
+  activeCat=cat;
+  let all=Object.entries(IDEAS).flatMap(([c,arr])=>arr.map(i=>({...i,cat:c})));
+  deck=cat==='all'?all:all.filter(i=>i.cat===cat);
+  deck.sort(()=>Math.random()-0.5);
 }
 
 // ── Cat Pills ──────────────────────────────────────────────
 function renderCatPills(){
-  const cats=[['all','🌀 All'],['home','🏠 Home'],['city','🌆 City'],
-              ['outdoor','🌿 Out'],['budget','💸 Budget'],
-              ['luxury','💎 Luxury'],['travel','🌍 Travel'],['surprise','✨ Surprise']];
-  document.getElementById('cat-pills').innerHTML = cats.map(([id,lbl])=>
+  const cats=[['all','🌀'],['home','🏠'],['city','🌆'],['outdoor','🌿'],
+              ['budget','💸'],['luxury','💎'],['travel','🌍'],['surprise','✨']];
+  document.getElementById('cat-pills').innerHTML=cats.map(([id,lbl])=>
     `<button class="pill ${id===activeCat?'active':''}" onclick="setCat('${id}',this)">${lbl}</button>`
   ).join('');
 }
 
-function setCat(cat, btn){
-  activeCat = cat;
-  seenTitles = [];
-  isGenerating = false;
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  // Rebuild deck from local IDEAS first
-  if(!IDEAS || !Object.keys(IDEAS).length){
-    console.error('IDEAS not loaded!');
-    return;
-  }
-  let all = Object.entries(IDEAS).flatMap(([c,arr]) => arr.map(i => ({...i, cat:c})));
-  deck = cat==='all' ? all : all.filter(i => i.cat === cat);
-  deck.sort(() => Math.random() - 0.5);
-  console.log(`Category: ${cat}, Deck size: ${deck.length}`);
-  renderSwipeCards();
+function setCat(cat,btn){
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active'); buildDeck(cat); renderSwipeCards();
 }
-
-function reshuffleDeck(){
-  seenTitles = [];
-  isGenerating = false;
-  buildDeck(activeCat);
-  renderSwipeCards();
-}
+function reshuffleDeck(){ buildDeck(activeCat); renderSwipeCards(); }
 
 // ── Swipe Cards ────────────────────────────────────────────
-let isGenerating = false;
-let seenTitles = [];
-
 function renderSwipeCards(){
   const area=document.getElementById('swipe-area');
   area.innerHTML='';
   if(!deck.length){
-    if(!isGenerating) generateMoreIdeas();
-    area.innerHTML=`<div class="empty">
-      <div style="font-size:36px;animation:pulse 1s infinite">✨</div>
-      <p>Generating fresh ideas<br>just for you...</p>
-    </div>`;
+    area.innerHTML='<div class="empty"><div>🎉</div><p>No more ideas!<br>Tap 🔀 to reshuffle</p></div>';
     return;
   }
   [2,1,0].forEach(i=>{
     if(!deck[i])return;
     area.appendChild(makeSwipeCard(deck[i],i));
   });
-  // Pre-generate when only 3 cards left
-  if(deck.length <= 3 && !isGenerating) generateMoreIdeas(false);
   const front=area.querySelector('.front');
   if(front)attachDrag(front);
-}
-
-async function generateMoreIdeas(rerender=true){
-  if(isGenerating) return;
-  isGenerating = true;
-  // Use active category, not random
-  const catToGenerate = activeCat === 'all'
-    ? ['home','city','outdoor','budget','luxury','travel','surprise'][Math.floor(Math.random()*7)]
-    : activeCat;
-  try {
-    const r = await fetch('/api/ai/generate-ideas', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        cat: catToGenerate,
-        exclude: seenTitles.slice(-20)
-      })
-    });
-    const data = await r.json();
-    if(Array.isArray(data)){
-      const newIdeas = data.filter(i => !seenTitles.includes(i.title));
-      newIdeas.forEach(i => seenTitles.push(i.title));
-      deck.push(...newIdeas);
-      if(rerender) renderSwipeCards();
-    }
-  } catch(e){
-    console.log('Generate error:', e);
-  }
-  isGenerating = false;
 }
 
 function makeSwipeCard(idea,idx){
@@ -1230,7 +905,7 @@ function addToCalendar(idea){
 async function loadSeasonal(){
   const r=await fetch('/api/seasonal');
   const {season,ideas}=await r.json();
-  const icons={winter:'❄️',spring:'🌺',summer:'☀️',autumn:'🍂'};
+  const icons={winter:'❄️',spring:'🌸',summer:'☀️',autumn:'🍂'};
   document.getElementById('seasonal-tab-btn').textContent=icons[season];
   document.getElementById('seasonal-header').innerHTML=`
     <div style="text-align:center;margin-bottom:12px">
@@ -1238,20 +913,15 @@ async function loadSeasonal(){
       <h2 style="font-size:19px;font-weight:900;color:#f43f5e;margin:6px 0">${season.charAt(0).toUpperCase()+season.slice(1)} Dates</h2>
     </div>`;
   document.getElementById('seasonal-cards').innerHTML=ideas.map(i=>
-    `<div class="card cat-${i.cat}" style="margin-bottom:12px">
-       <div class="card-top">
-         <span style="font-size:36px">${i.emoji}</span>
-         <div class="card-meta">
-           <div class="card-cost">${i.cost}</div>
-           <div style="color:rgba(255,255,255,0.7);font-size:11px">${i.duration}</div>
-         </div>
+    `<div class="card cat-${i.cat}">
+       <div class="card-top"><span class="card-emoji">${i.emoji}</span>
+         <div class="card-meta"><div class="card-cost">${i.cost}</div><div>${i.duration}</div></div>
        </div>
-       <h2 style="color:#fff!important;font-size:17px;font-weight:900;margin-bottom:5px">${i.title}</h2>
-       <p style="color:rgba(255,255,255,0.85)!important;font-size:12px;line-height:1.5">${i.desc}</p>
-       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-         <button onclick='saveIdea(${JSON.stringify(i)})' style="padding:6px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;cursor:pointer">${t('save')}</button>
-         <button onclick='shareIdea(${JSON.stringify(i)})' style="padding:6px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;cursor:pointer">🔗 ${t('share')}</button>
-         <button onclick='addToCalendar(${JSON.stringify(i)})' style="padding:6px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;cursor:pointer">${t('add_to_calendar')}</button>
+       <h2>${i.title}</h2><p>${i.desc}</p>
+       <div class="card-btns">
+         <button onclick='saveIdea(${JSON.stringify(i)})'>${t('save')}</button>
+         <button onclick='shareIdea(${JSON.stringify(i)})'>🔗 ${t('share')}</button>
+         <button onclick='addToCalendar(${JSON.stringify(i)})'>${t('add_to_calendar')}</button>
        </div>
      </div>`
   ).join('');
@@ -1547,21 +1217,15 @@ function showToast(msg){
 }
 
 // ── Tab Navigation ─────────────────────────────────────────
-function showTab(name, btn){
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  const screen = document.getElementById('screen-'+name);
-  if(screen) screen.classList.add('active');
-  if(btn) btn.classList.add('active');
-  // Reload content for each tab
-  if(name==='saved') renderSaved();
-  if(name==='history') renderHistory();
-  if(name==='couples') renderMatches();
-  if(name==='stats') renderStats();
-  if(name==='gallery') renderGallery();
-  if(name==='album') loadAlbum();
-  if(name==='seasonal') loadSeasonal();
-  if(name==='spark'){ renderCatPills(); renderSwipeCards(); }
+function showTab(name,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='saved')renderSaved();
+  if(name==='history')renderHistory();
+  if(name==='couples')renderMatches();
+  if(name==='stats')renderStats();
 }
 </script>
 </body>
