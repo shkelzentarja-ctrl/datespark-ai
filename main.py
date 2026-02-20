@@ -484,7 +484,23 @@ HTML = """
 <meta name="apple-mobile-web-app-title" content="DateSpark">
 <style>
 :root{--bg:#0d0d0d;--surface:#1a1a2e;--text:#ffffff;--subtext:#9ca3af;--border:#ffffff15;--input:#1f2937;--card-overlay:rgba(0,0,0,0.3)}
-.light{--bg:#f9fafb;--surface:#ffffff;--text:#111827;--subtext:#6b7280;--border:#e5e7eb;--input:#f3f4f6;--card-overlay:rgba(0,0,0,0.15)}
+.light{--bg:#f0f0f5;--surface:#ffffff;--text:#111827;--subtext:#6b7280;--border:#d1d5db;--input:#e5e7eb;--card-overlay:rgba(0,0,0,0.15)}
+.light body{background:#f0f0f5}
+.light .surface{background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.light input,.light textarea,.light select{background:#e5e7eb;color:#111827;border-color:#d1d5db}
+.light nav{background:#ffffff;box-shadow:0 -2px 8px rgba(0,0,0,0.06)}
+.light header{background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.light .pill{background:#e5e7eb;color:#374151}
+.light .pill.active{background:#f43f5e;color:#fff}
+.light .swipe-btn{background:#ffffff;border-color:#d1d5db}
+.light .memory-card{background:#ffffff;border-color:#e5e7eb}
+.light .stat-card{background:#ffffff;border-color:#e5e7eb}
+.light .recommend-card{background:#ffffff}
+.light .chat-box{background:#f0f0f5}
+.light .chat-msg.ai{background:#e5e7eb;color:#111827}
+.light .modal-box{background:#ffffff}
+.light .rating-btn{background:#e5e7eb;color:#111827}
+.light .code-display{background:#f0f0f5;color:#f43f5e}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;transition:background-color .3s,color .3s}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
 header{background:var(--surface);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
