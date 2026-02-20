@@ -989,18 +989,28 @@ function buildDeck(cat='all'){
 
 // ── Cat Pills ──────────────────────────────────────────────
 function renderCatPills(){
-  const cats=[['all','🌀'],['home','🏠'],['city','🌆'],['outdoor','🌿'],
-              ['budget','💸'],['luxury','💎'],['travel','🌍'],['surprise','✨']];
-  document.getElementById('cat-pills').innerHTML=cats.map(([id,lbl])=>
+  const cats=[['all','🌀 All'],['home','🏠 Home'],['city','🌆 City'],
+              ['outdoor','🌿 Out'],['budget','💸 Budget'],
+              ['luxury','💎 Luxury'],['travel','🌍 Travel'],['surprise','✨ Surprise']];
+  document.getElementById('cat-pills').innerHTML = cats.map(([id,lbl])=>
     `<button class="pill ${id===activeCat?'active':''}" onclick="setCat('${id}',this)">${lbl}</button>`
   ).join('');
 }
 
-function setCat(cat,btn){
-  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active'); buildDeck(cat); renderSwipeCards();
+function setCat(cat, btn){
+  activeCat = cat;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  buildDeck(cat);
+  seenTitles = [];
+  renderSwipeCards();
 }
-function reshuffleDeck(){ buildDeck(activeCat); renderSwipeCards(); }
+
+function reshuffleDeck(){
+  buildDeck(activeCat);
+  seenTitles = [];
+  renderSwipeCards();
+}
 
 // ── Swipe Cards ────────────────────────────────────────────
 let isGenerating = false;
