@@ -273,7 +273,7 @@ HTML = """
 
 <header>
   <h1>💘 DateSpark AI</h1>
-  <span>Powered by Gemini ✅ Free</span>
+  <span>Shkelzen Tarja</span>
 </header>
 
 <div id="screen-spark" class="screen active">
