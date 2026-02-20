@@ -511,7 +511,8 @@ nav{background:var(--surface);display:flex;border-top:1px solid var(--border);po
 nav button{flex:1;min-width:44px;padding:12px 2px;background:none;border:none;color:var(--subtext);font-size:20px;cursor:pointer;transition:color .2s;white-space:nowrap}
 nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .screen{display:none;flex:1;flex-direction:column;padding:14px;gap:12px;overflow-y:auto;padding-bottom:80px}
-.screen.active{display:flex}
+.screen.active{display:flex!important}
+#screen-auth{display:flex!important}
 .card{border-radius:20px;padding:18px;position:relative;overflow:hidden;margin-bottom:10px}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
 .card-emoji{font-size:36px;line-height:1}
@@ -959,12 +960,35 @@ function continueGuest(){
 }
 
 function enterApp(){
-  document.getElementById('screen-auth').classList.remove('active');
-  document.getElementById('main-nav').style.display='flex';
+  // Hide ALL screens first
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+
+  // Show nav
+  document.getElementById('main-nav').style.display = 'flex';
+
+  // Update user badge
   renderUserBadge(currentUser, null);
-  document.getElementById('my-code').textContent=shareCode;
+
+  // Set share code
+  document.getElementById('my-code').textContent = shareCode;
+
+  // Show spark screen explicitly
+  const sparkScreen = document.getElementById('screen-spark');
+  sparkScreen.style.display = 'flex';
+  sparkScreen.classList.add('active');
+
+  // Set first nav button active
+  const firstBtn = document.querySelector('#main-nav button');
+  if(firstBtn){
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    firstBtn.classList.add('active');
+  }
+
+  // Load data
   init();
-  showTab('spark',document.querySelector('nav button'));
 }
 
 function showAuthScreen(){
