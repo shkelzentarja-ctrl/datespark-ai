@@ -512,7 +512,6 @@ nav button{flex:1;min-width:44px;padding:12px 2px;background:none;border:none;co
 nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .screen{display:none;flex:1;flex-direction:column;padding:14px;gap:12px;overflow-y:auto;padding-bottom:80px}
 .screen.active{display:flex!important}
-#screen-auth{display:flex!important}
 .card{border-radius:20px;padding:18px;position:relative;overflow:hidden;margin-bottom:10px}
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
 .card-emoji{font-size:36px;line-height:1}
@@ -992,9 +991,14 @@ function enterApp(){
 }
 
 function showAuthScreen(){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-auth').classList.add('active');
-  document.getElementById('main-nav').style.display='none';
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.style.display = 'none';
+  });
+  const authScreen = document.getElementById('screen-auth');
+  authScreen.style.display = 'flex';
+  authScreen.classList.add('active');
+  document.getElementById('main-nav').style.display = 'none';
 }
 
 // ── Init ───────────────────────────────────────────────────
