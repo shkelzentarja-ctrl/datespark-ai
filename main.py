@@ -18,7 +18,7 @@
 # ============================================================
 
 from flask import Flask, render_template_string, request, jsonify, session
-import requests, json, random, os, base64
+import requests, json, random, os, sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
@@ -30,8 +30,47 @@ GEMINI_URL = (
     "gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY
 )
 
-# ── In-memory user store (replace with DB for production) ────
-USERS = {}  # {username: {password, saved, history, matches, chat_history, preferences}}
+# ── SQLite Database Setup ────────────────────────────────────
+DB_PATH = os.path.join(os.path.dirname(__file__), "datespark.db")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    with get_db() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password TEXT NOT NULL,
+                share_code TEXT NOT NULL,
+                chat_history TEXT DEFAULT '[]',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS saved_ideas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                idea TEXT NOT NULL,
+                saved_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (username) REFERENCES users(username)
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS date_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                memory TEXT NOT NULL,
+                logged_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (username) REFERENCES users(username)
+            )
+        """)
+        db.commit()
+
+# Initialize DB on startup
+init_db()
 
 # ── Date Ideas Data ──────────────────────────────────────────
 IDEAS = {
@@ -168,21 +207,26 @@ def register():
     d = request.json
     u, p = d.get("username","").strip(), d.get("password","")
     if not u or not p: return jsonify({"error": "Username and password required"}), 400
-    if u in USERS: return jsonify({"error": "Username already taken"}), 400
-    USERS[u] = {"password": p, "saved": [], "history": [], "matches": [],
-                "chat_history": [], "preferences": {}, "share_code": ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=6))}
+    with get_db() as db:
+        if db.execute("SELECT 1 FROM users WHERE username=?", (u,)).fetchone():
+            return jsonify({"error": "Username already taken"}), 400
+        code = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=6))
+        db.execute("INSERT INTO users (username, password, share_code) VALUES (?,?,?)", (u, p, code))
+        db.commit()
     session["user"] = u
-    return jsonify({"success": True, "username": u, "share_code": USERS[u]["share_code"]})
+    return jsonify({"success": True, "username": u, "share_code": code, "saved": [], "history": []})
 
 @app.route("/api/login", methods=["POST"])
 def login():
     d = request.json
     u, p = d.get("username","").strip(), d.get("password","")
-    if u not in USERS or USERS[u]["password"] != p:
-        return jsonify({"error": "Invalid username or password"}), 401
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE username=? AND password=?", (u, p)).fetchone()
+        if not user: return jsonify({"error": "Invalid username or password"}), 401
+        saved = [json.loads(r["idea"]) for r in db.execute("SELECT idea FROM saved_ideas WHERE username=? ORDER BY saved_at", (u,)).fetchall()]
+        history = [json.loads(r["memory"]) for r in db.execute("SELECT memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall()]
     session["user"] = u
-    return jsonify({"success": True, "username": u, "share_code": USERS[u]["share_code"],
-                    "saved": USERS[u]["saved"], "history": USERS[u]["history"]})
+    return jsonify({"success": True, "username": u, "share_code": user["share_code"], "saved": saved, "history": history})
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
@@ -203,23 +247,32 @@ def save_idea():
     u = session.get("user")
     if not u: return jsonify({"error": "Not logged in"}), 401
     idea = request.json.get("idea")
-    if not any(s["title"]==idea["title"] for s in USERS[u]["saved"]):
-        USERS[u]["saved"].append(idea)
-    return jsonify({"success": True, "saved": USERS[u]["saved"]})
+    with get_db() as db:
+        existing = [json.loads(r["idea"]) for r in db.execute("SELECT idea FROM saved_ideas WHERE username=?", (u,)).fetchall()]
+        if not any(s["title"]==idea["title"] for s in existing):
+            db.execute("INSERT INTO saved_ideas (username, idea) VALUES (?,?)", (u, json.dumps(idea)))
+            db.commit()
+        saved = [json.loads(r["idea"]) for r in db.execute("SELECT idea FROM saved_ideas WHERE username=? ORDER BY saved_at", (u,)).fetchall()]
+    return jsonify({"success": True, "saved": saved})
 
 @app.route("/api/history", methods=["POST"])
 def add_history():
     u = session.get("user")
     if not u: return jsonify({"error": "Not logged in"}), 401
-    USERS[u]["history"].append(request.json)
-    return jsonify({"success": True, "history": USERS[u]["history"]})
+    with get_db() as db:
+        db.execute("INSERT INTO date_history (username, memory) VALUES (?,?)", (u, json.dumps(request.json)))
+        db.commit()
+    return jsonify({"success": True})
 
 @app.route("/api/userdata")
 def get_userdata():
     u = session.get("user")
     if not u: return jsonify({"error": "Not logged in"}), 401
-    return jsonify({"saved": USERS[u]["saved"], "history": USERS[u]["history"],
-                    "share_code": USERS[u]["share_code"], "matches": USERS[u]["matches"]})
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE username=?", (u,)).fetchone()
+        saved = [json.loads(r["idea"]) for r in db.execute("SELECT idea FROM saved_ideas WHERE username=? ORDER BY saved_at", (u,)).fetchall()]
+        history = [json.loads(r["memory"]) for r in db.execute("SELECT memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall()]
+    return jsonify({"saved": saved, "history": history, "share_code": user["share_code"]})
 
 # ── AI Routes ─────────────────────────────────────────────────
 @app.route("/api/ai/quick", methods=["POST"])
@@ -261,8 +314,10 @@ def ai_places():
 @app.route("/api/ai/recommend", methods=["POST"])
 def ai_recommend():
     u = session.get("user")
-    history = USERS[u]["history"] if u else []
-    saved = USERS[u]["saved"] if u else []
+    history, saved = [], []
+    if u:
+        with get_db() as db:
+            history = [json.loads(r["memory"]) for r in db.execute("SELECT memory FROM date_history WHERE username=? ORDER BY logged_at DESC LIMIT 10", (u,)).fetchall()]
     cats = [h.get("cat","surprise") for h in history]
     fav_cat = max(set(cats), key=cats.count) if cats else "surprise"
     done_titles = [h["title"] for h in history]
@@ -279,16 +334,23 @@ def ai_chat():
     u = session.get("user")
     msg = request.json.get("message","")
     lang = request.json.get("lang","en")
-    history = USERS[u]["chat_history"] if u else []
-    ctx = "\n".join([f"{'User' if m['role']=='user' else 'Assistant'}: {m['text']}" for m in history[-6:]])
+    chat_history = []
+    if u:
+        with get_db() as db:
+            user = db.execute("SELECT chat_history FROM users WHERE username=?", (u,)).fetchone()
+            chat_history = json.loads(user["chat_history"]) if user else []
+    ctx = "\n".join([f"{'User' if m['role']=='user' else 'Assistant'}: {m['text']}" for m in chat_history[-6:]])
     prompt = (f'You are a friendly date idea assistant. Respond in {"English" if lang=="en" else "Spanish" if lang=="es" else "French" if lang=="fr" else "German"}. '
               f'Previous conversation:\n{ctx}\nUser: {msg}\n'
               f'Give a helpful, fun, concise response about date ideas. Keep it under 100 words.')
     result = call_gemini(prompt)
     if not result: return jsonify({"error": "AI unavailable"}), 500
     if u:
-        USERS[u]["chat_history"].append({"role":"user","text":msg})
-        USERS[u]["chat_history"].append({"role":"assistant","text":result})
+        chat_history.append({"role":"user","text":msg})
+        chat_history.append({"role":"assistant","text":result})
+        with get_db() as db:
+            db.execute("UPDATE users SET chat_history=? WHERE username=?", (json.dumps(chat_history[-20:]), u))
+            db.commit()
     return jsonify({"response": result})
 
 @app.route("/")
