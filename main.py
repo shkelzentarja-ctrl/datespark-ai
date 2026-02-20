@@ -791,30 +791,40 @@ function updateNavBadges(){
 
 // ── Share ──────────────────────────────────────────────────
 function shareIdea(idea){
-  const text=`💘 ${idea.title}\n${idea.desc}\n⏱ ${idea.duration} | 💰 ${idea.cost}\n\nvia DateSpark AI`;
-  const modal=document.createElement('div');
-  modal.className='modal';
-  modal.innerHTML=`<div class="modal-box">
-    <h3 style="color:#f43f5e;margin-bottom:12px">🔗 Share This Idea</h3>
-    <div class="card cat-${idea.cat||'surprise'}" style="margin-bottom:12px">
-      <h2>${idea.emoji} ${idea.title}</h2><p>${idea.desc}</p>
-    </div>
-    <div class="share-btns">
-      <button class="share-btn wa" onclick="window.open('https://wa.me/?text='+encodeURIComponent(this.dataset.t),'_blank')" data-t="${text}">📱 WhatsApp</button>
-      <button class="share-btn em" onclick="window.open('mailto:?subject=Date Idea&body='+encodeURIComponent(this.dataset.t),'_blank')" data-t="${text}">📧 Email</button>
-      <button class="share-btn cp" onclick="navigator.clipboard?.writeText(this.dataset.t);showToast('Copied!')" data-t="${text}">📋 Copy</button>
-    </div>
-    <button class="btn btn-gray" style="margin-top:10px" onclick="this.closest('.modal').remove()">Close</button>
-  </div>`;
+  const title = idea.title || '';
+  const desc = idea.desc || '';
+  const duration = idea.duration || '';
+  const cost = idea.cost || '';
+  const cat = idea.cat || 'surprise';
+  const emoji = idea.emoji || '';
+  const text = '💘 ' + title + '\n' + desc + '\n⏱ ' + duration + ' | 💰 ' + cost + '\n\nvia DateSpark AI';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+  box.innerHTML = '<h3 style="color:#f43f5e;margin-bottom:12px">🔗 Share This Idea</h3>'
+    + '<div class="card cat-' + cat + '" style="margin-bottom:12px"><h2>' + emoji + ' ' + title + '</h2><p>' + desc + '</p></div>'
+    + '<div class="share-btns">'
+    + '<button class="share-btn wa" id="wa-btn">📱 WhatsApp</button>'
+    + '<button class="share-btn em" id="em-btn">📧 Email</button>'
+    + '<button class="share-btn cp" id="cp-btn">📋 Copy</button>'
+    + '</div>'
+    + '<button class="btn btn-gray" style="margin-top:10px" id="close-share-btn">Close</button>';
+  modal.appendChild(box);
   document.body.appendChild(modal);
+  document.getElementById('wa-btn').onclick = function(){ window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank'); };
+  document.getElementById('em-btn').onclick = function(){ window.open('mailto:?subject=Date Idea&body='+encodeURIComponent(text),'_blank'); };
+  document.getElementById('cp-btn').onclick = function(){ navigator.clipboard && navigator.clipboard.writeText(text); showToast('Copied!'); };
+  document.getElementById('close-share-btn').onclick = function(){ modal.remove(); };
 }
 
 function addToCalendar(idea){
-  const title=encodeURIComponent('💘 '+idea.title);
-  const details=encodeURIComponent(idea.desc);
-  const d=new Date(); d.setDate(d.getDate()+7);
-  const ds=d.toISOString().replace(/-|:|\.\d\d\d/g,'');
-  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${ds}/${ds}`,'_blank');
+  const title = encodeURIComponent('💘 ' + (idea.title||''));
+  const details = encodeURIComponent(idea.desc||'');
+  const d = new Date();
+  d.setDate(d.getDate()+7);
+  const ds = d.toISOString().replace(/-|:|\.\d\d\d/g,'');
+  window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text='+title+'&details='+details+'&dates='+ds+'/'+ds,'_blank');
 }
 
 // ── Seasonal ───────────────────────────────────────────────
