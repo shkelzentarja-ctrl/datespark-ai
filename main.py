@@ -46,6 +46,8 @@ def init_db():
                 password TEXT NOT NULL,
                 share_code TEXT NOT NULL,
                 chat_history TEXT DEFAULT '[]',
+                avatar TEXT DEFAULT NULL,
+                couple_partner TEXT DEFAULT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -65,6 +67,16 @@ def init_db():
                 memory TEXT NOT NULL,
                 logged_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (username) REFERENCES users(username)
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS couple_photos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                couple_code TEXT NOT NULL,
+                username TEXT NOT NULL,
+                photo TEXT NOT NULL,
+                caption TEXT DEFAULT '',
+                uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
         db.commit()
@@ -227,6 +239,66 @@ def login():
         history = [json.loads(r["memory"]) for r in db.execute("SELECT memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall()]
     session["user"] = u
     return jsonify({"success": True, "username": u, "share_code": user["share_code"], "saved": saved, "history": history})
+
+@app.route("/api/avatar", methods=["POST"])
+def update_avatar():
+    u = session.get("user")
+    if not u: return jsonify({"error": "Not logged in"}), 401
+    photo = request.json.get("photo")
+    with get_db() as db:
+        db.execute("UPDATE users SET avatar=? WHERE username=?", (photo, u))
+        db.commit()
+    return jsonify({"success": True})
+
+@app.route("/api/couple/photos", methods=["GET"])
+def get_couple_photos():
+    u = session.get("user")
+    if not u: return jsonify({"error": "Not logged in"}), 401
+    with get_db() as db:
+        user = db.execute("SELECT share_code FROM users WHERE username=?", (u,)).fetchone()
+        if not user: return jsonify([])
+        photos = db.execute(
+            "SELECT * FROM couple_photos WHERE couple_code=? ORDER BY uploaded_at DESC",
+            (user["share_code"],)
+        ).fetchall()
+    return jsonify([dict(p) for p in photos])
+
+@app.route("/api/couple/photos", methods=["POST"])
+def add_couple_photo():
+    u = session.get("user")
+    if not u: return jsonify({"error": "Not logged in"}), 401
+    d = request.json
+    photo = d.get("photo")
+    caption = d.get("caption", "")
+    with get_db() as db:
+        user = db.execute("SELECT share_code FROM users WHERE username=?", (u,)).fetchone()
+        db.execute(
+            "INSERT INTO couple_photos (couple_code, username, photo, caption) VALUES (?,?,?,?)",
+            (user["share_code"], u, photo, caption)
+        )
+        db.commit()
+    return jsonify({"success": True})
+
+@app.route("/api/couple/photos/<int:photo_id>", methods=["DELETE"])
+def delete_couple_photo(photo_id):
+    u = session.get("user")
+    if not u: return jsonify({"error": "Not logged in"}), 401
+    with get_db() as db:
+        db.execute("DELETE FROM couple_photos WHERE id=? AND username=?", (photo_id, u))
+        db.commit()
+    return jsonify({"success": True})
+
+@app.route("/api/gallery")
+def get_gallery():
+    u = session.get("user")
+    if not u: return jsonify({"error": "Not logged in"}), 401
+    with get_db() as db:
+        memories = [json.loads(r["memory"]) for r in db.execute(
+            "SELECT memory FROM date_history WHERE username=? ORDER BY logged_at DESC", (u,)
+        ).fetchall()]
+    photos = [{"photo": m["photo"], "title": m["title"], "date": m["date"], "rating": m.get("rating",5)}
+              for m in memories if m.get("photo")]
+    return jsonify(photos)
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
@@ -543,6 +615,28 @@ input:focus,textarea:focus{border-color:#f43f5e}
   </div>
 </div>
 
+<!-- Gallery Screen -->
+<div id="screen-gallery" class="screen">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <div class="label">📸 Date Photo Gallery</div>
+    <span id="gallery-count" style="font-size:11px;color:var(--subtext)"></span>
+  </div>
+  <div class="photo-grid" id="gallery-grid"></div>
+</div>
+
+<!-- Couple Album Screen -->
+<div id="screen-album" class="screen">
+  <div class="surface">
+    <div class="label">💑 Couples Photo Album</div>
+    <p style="font-size:12px;color:var(--subtext);margin-bottom:10px">Share photos with your partner. Both of you can add & view!</p>
+    <input type="file" accept="image/*" id="album-photo-input" onchange="previewAlbumPhoto(this)" style="font-size:12px;padding:6px">
+    <img id="album-preview" style="display:none;width:100%;max-height:150px;object-fit:cover;border-radius:10px;margin-top:8px">
+    <input id="album-caption" placeholder="Add a caption..." style="margin-top:8px">
+    <button class="btn btn-pink" style="margin-top:8px" onclick="uploadAlbumPhoto()">📤 Add to Album</button>
+  </div>
+  <div id="album-list"></div>
+</div>
+
 <!-- Spark Screen -->
 <div id="screen-spark" class="screen">
   <div class="pills" id="cat-pills"></div>
@@ -648,6 +742,8 @@ input:focus,textarea:focus{border-color:#f43f5e}
   <button onclick="showTab('stats',this)">📊</button>
   <button onclick="showTab('history',this)">📖</button>
   <button onclick="showTab('saved',this)">❤️</button>
+  <button onclick="showTab('gallery',this)">🖼️</button>
+  <button onclick="showTab('album',this)">💑📸</button>
 </nav>
 
 <div class="confetti-container" id="confetti"></div>
@@ -712,11 +808,58 @@ function toggleTheme(){
 // ── Language ───────────────────────────────────────────────
 function setLang(l){ lang=l; applyTranslations(); }
 function applyTranslations(){
-  document.getElementById('app-title').textContent=t('title');
-  document.querySelectorAll('nav button').forEach((b,i)=>{
-    const keys=['spark','seasonal','couples','ai','chat','stats','history','saved'];
-    b.textContent=t(keys[i]);
+  // Header
+  document.getElementById('app-title').textContent = t('title');
+
+  // Nav buttons
+  const navKeys = ['spark','seasonal','couples','ai','chat','stats','history','saved'];
+  document.querySelectorAll('nav button').forEach((b,i) => {
+    const base = T.en[navKeys[i]]; // original emoji stays
+    b.textContent = t(navKeys[i]);
   });
+
+  // Auth screen
+  const authBtn = document.getElementById('auth-submit-btn');
+  if(authBtn) authBtn.textContent = authMode==='login' ? t('login') : t('register');
+  const toggleLink = document.getElementById('auth-toggle-link');
+  if(toggleLink) toggleLink.textContent = authMode==='login'
+    ? `${t('no_account')} ${t('register')}`
+    : `${t('have_account')} ${t('login')}`;
+  const lblU = document.getElementById('lbl-username');
+  if(lblU) lblU.textContent = t('username');
+  const lblP = document.getElementById('lbl-password');
+  if(lblP) lblP.textContent = t('password');
+
+  // Couples screen
+  const lblCode = document.getElementById('lbl-your-code');
+  if(lblCode) lblCode.textContent = t('your_code');
+  const lblEnter = document.getElementById('lbl-enter-code');
+  if(lblEnter) lblEnter.textContent = t('enter_code');
+  const lblMatches = document.getElementById('lbl-matches');
+  if(lblMatches) lblMatches.textContent = t('matches');
+  const connectBtn = document.getElementById('connect-btn');
+  if(connectBtn) connectBtn.textContent = t('connect');
+
+  // AI screen buttons
+  const quickBtn = document.getElementById('quick-btn');
+  if(quickBtn) quickBtn.textContent = t('quick_idea');
+  const itinBtn = document.getElementById('itin-btn');
+  if(itinBtn) itinBtn.textContent = t('full_itinerary');
+
+  // Chat placeholder
+  const chatInput = document.getElementById('chat-input');
+  if(chatInput) chatInput.placeholder = t('type_message');
+
+  // Re-render dynamic screens to update buttons inside cards
+  const activeScreen = document.querySelector('.screen.active');
+  if(activeScreen){
+    const id = activeScreen.id.replace('screen-','');
+    if(id==='saved') renderSaved();
+    if(id==='history') renderHistory();
+    if(id==='couples') renderMatches();
+    if(id==='spark') renderSwipeCards();
+    if(id==='seasonal') loadSeasonal();
+  }
 }
 
 // ── Auth ───────────────────────────────────────────────────
@@ -751,9 +894,7 @@ function continueGuest(){
 function enterApp(){
   document.getElementById('screen-auth').classList.remove('active');
   document.getElementById('main-nav').style.display='flex';
-  document.getElementById('user-badge-area').innerHTML=currentUser
-    ?`<span class="user-badge">👤 ${currentUser}</span>`
-    :`<button class="icon-btn" onclick="showAuthScreen()" title="Login">🔑</button>`;
+  renderUserBadge(currentUser, null);
   document.getElementById('my-code').textContent=shareCode;
   init();
   showTab('spark',document.querySelector('nav button'));
@@ -1272,10 +1413,12 @@ function showTab(name,btn){
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
   btn.classList.add('active');
-  if(name==='saved')renderSaved();
-  if(name==='history')renderHistory();
-  if(name==='couples')renderMatches();
-  if(name==='stats')renderStats();
+  if(name==='saved') renderSaved();
+  if(name==='history') renderHistory();
+  if(name==='couples') renderMatches();
+  if(name==='stats') renderStats();
+  if(name==='gallery') renderGallery();
+  if(name==='album') loadAlbum();
 }
 </script>
 </body>
