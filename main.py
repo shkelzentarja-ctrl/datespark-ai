@@ -302,6 +302,11 @@ HTML = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>💘 DateSpark AI</title>
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#f43f5e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DateSpark">
 <style>
 :root{--bg:#0d0d0d;--surface:#1a1a2e;--text:#ffffff;--subtext:#9ca3af;--border:#ffffff15;--input:#1f2937;--card-overlay:rgba(0,0,0,0.3)}
 .light{--bg:#f9fafb;--surface:#ffffff;--text:#111827;--subtext:#6b7280;--border:#e5e7eb;--input:#f3f4f6;--card-overlay:rgba(0,0,0,0.15)}
@@ -1142,7 +1147,6 @@ function showConfetti(){
   }
 }
 
-// ── Toast ──────────────────────────────────────────────────
 function showToast(msg){
   const t=document.createElement('div');
   t.className='toast'; t.textContent=msg;
