@@ -275,6 +275,27 @@ def get_userdata():
     return jsonify({"saved": saved, "history": history, "share_code": user["share_code"]})
 
 # ── AI Routes ─────────────────────────────────────────────────
+@app.route("/api/ai/generate-ideas", methods=["POST"])
+def ai_generate_ideas():
+    d = request.json
+    cat = d.get("cat", "surprise")
+    exclude = d.get("exclude", [])
+    u = session.get("user")
+    done = []
+    if u:
+        with get_db() as db:
+            done = [json.loads(r["memory"])["title"] for r in db.execute("SELECT memory FROM date_history WHERE username=?", (u,)).fetchall()]
+    exclude_all = list(set(exclude + done))
+    prompt = (f'Generate 6 creative and unique {cat} date ideas for couples. '
+              f'{"Avoid these: " + ", ".join(exclude_all[:10]) + "." if exclude_all else ""} '
+              f'Make them fresh, fun and specific. '
+              f'Return ONLY a JSON array, no markdown: '
+              f'[{{"title":"...","desc":"one engaging sentence","emoji":"...","duration":"...","cost":"$/$/$$/$$/Free","cat":"{cat}"}}]')
+    result = call_gemini(prompt)
+    if not result: return jsonify({"error": "AI unavailable"}), 500
+    try: return jsonify(json.loads(result))
+    except: return jsonify({"error": "Parse error"}), 500
+
 @app.route("/api/ai/quick", methods=["POST"])
 def ai_quick():
     topic = request.json.get("topic","")
@@ -774,19 +795,48 @@ function setCat(cat,btn){
 function reshuffleDeck(){ buildDeck(activeCat); renderSwipeCards(); }
 
 // ── Swipe Cards ────────────────────────────────────────────
+let isGenerating = false;
+let seenTitles = [];
+
 function renderSwipeCards(){
   const area=document.getElementById('swipe-area');
   area.innerHTML='';
   if(!deck.length){
-    area.innerHTML='<div class="empty"><div>🎉</div><p>No more ideas!<br>Tap 🔀 to reshuffle</p></div>';
+    if(!isGenerating) generateMoreIdeas();
+    area.innerHTML=`<div class="empty">
+      <div style="font-size:36px;animation:pulse 1s infinite">✨</div>
+      <p>Generating fresh ideas<br>just for you...</p>
+    </div>`;
     return;
   }
   [2,1,0].forEach(i=>{
     if(!deck[i])return;
     area.appendChild(makeSwipeCard(deck[i],i));
   });
+  // Pre-generate when only 3 cards left
+  if(deck.length <= 3 && !isGenerating) generateMoreIdeas(false);
   const front=area.querySelector('.front');
   if(front)attachDrag(front);
+}
+
+async function generateMoreIdeas(rerender=true){
+  if(isGenerating) return;
+  isGenerating = true;
+  try {
+    const r = await fetch('/api/ai/generate-ideas', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({cat: activeCat==='all'?['home','city','outdoor','budget','luxury','travel','surprise'][Math.floor(Math.random()*7)]:activeCat, exclude: seenTitles.slice(-20)})
+    });
+    const data = await r.json();
+    if(Array.isArray(data)){
+      const newIdeas = data.filter(i => !seenTitles.includes(i.title));
+      newIdeas.forEach(i => seenTitles.push(i.title));
+      deck.push(...newIdeas);
+      if(rerender) renderSwipeCards();
+    }
+  } catch(e){ console.log('Generate error:', e); }
+  isGenerating = false;
 }
 
 function makeSwipeCard(idea,idx){
