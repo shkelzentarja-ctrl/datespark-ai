@@ -1,17 +1,5 @@
 # ============================================================
-#  DateSpark AI — Ultimate Edition
-#  All 10 features included:
-#  ✅ User accounts & login
-#  ✅ Multi-language support
-#  ✅ Add photos to date memories
-#  ✅ Google Calendar integration
-#  ✅ Date ideas chat assistant
-#  ✅ Personalized recommendations
-#  ✅ Date stats dashboard
-#  ✅ Push notifications
-#  ✅ Light/Dark mode toggle
-#  ✅ Share via WhatsApp/Email
-#
+#  DateSpark AI — Stable Working Version
 #  Install: pip install flask requests
 #  Run:     python main.py
 #  Visit:   http://localhost:5000
@@ -69,7 +57,6 @@ def init_db():
         """)
         db.commit()
 
-# Initialize DB on startup
 init_db()
 
 # ── Date Ideas Data ──────────────────────────────────────────
@@ -137,49 +124,6 @@ SEASONAL = {
     ],
 }
 
-TRANSLATIONS = {
-    "en": {"title": "DateSpark AI", "spark": "Spark", "seasonal": "Seasonal", "couples": "Couples",
-           "ai": "AI", "chat": "Chat", "stats": "Stats", "history": "History", "saved": "Saved",
-           "login": "Login", "register": "Register", "logout": "Logout", "username": "Username",
-           "password": "Password", "dark_mode": "Dark Mode", "light_mode": "Light Mode",
-           "share": "Share", "save": "Save", "log": "Log Memory", "find_places": "Find Places",
-           "quick_idea": "Quick Idea", "full_itinerary": "Full Itinerary", "send": "Send",
-           "type_message": "Ask me anything about dates...", "your_code": "Your Share Code",
-           "enter_code": "Enter Partner's Code", "connect": "Connect", "matches": "Matches",
-           "no_matches": "No matches yet! Go swipe together.", "clear_all": "Clear All",
-           "add_to_calendar": "Add to Calendar", "whatsapp": "WhatsApp", "email": "Email"},
-    "es": {"title": "DateSpark IA", "spark": "Descubrir", "seasonal": "Temporada", "couples": "Pareja",
-           "ai": "IA", "chat": "Chat", "stats": "Stats", "history": "Historia", "saved": "Guardado",
-           "login": "Entrar", "register": "Registrar", "logout": "Salir", "username": "Usuario",
-           "password": "Contraseña", "dark_mode": "Modo Oscuro", "light_mode": "Modo Claro",
-           "share": "Compartir", "save": "Guardar", "log": "Registrar", "find_places": "Buscar Lugares",
-           "quick_idea": "Idea Rápida", "full_itinerary": "Itinerario", "send": "Enviar",
-           "type_message": "Pregúntame sobre citas...", "your_code": "Tu Código", "whatsapp": "WhatsApp",
-           "enter_code": "Código de tu Pareja", "connect": "Conectar", "matches": "Coincidencias",
-           "no_matches": "Sin coincidencias todavía.", "clear_all": "Borrar Todo",
-           "add_to_calendar": "Añadir al Calendario", "email": "Email"},
-    "fr": {"title": "DateSpark IA", "spark": "Découvrir", "seasonal": "Saison", "couples": "Couple",
-           "ai": "IA", "chat": "Chat", "stats": "Stats", "history": "Histoire", "saved": "Sauvé",
-           "login": "Connexion", "register": "S'inscrire", "logout": "Déconnexion", "username": "Utilisateur",
-           "password": "Mot de passe", "dark_mode": "Mode Sombre", "light_mode": "Mode Clair",
-           "share": "Partager", "save": "Sauver", "log": "Journal", "find_places": "Trouver des Lieux",
-           "quick_idea": "Idée Rapide", "full_itinerary": "Itinéraire", "send": "Envoyer",
-           "type_message": "Demandez-moi des idées de rendez-vous...", "your_code": "Votre Code",
-           "enter_code": "Code de votre Partenaire", "connect": "Connecter", "matches": "Correspondances",
-           "no_matches": "Pas encore de correspondances.", "clear_all": "Tout Effacer",
-           "add_to_calendar": "Ajouter au Calendrier", "whatsapp": "WhatsApp", "email": "Email"},
-    "de": {"title": "DateSpark KI", "spark": "Entdecken", "seasonal": "Saison", "couples": "Paar",
-           "ai": "KI", "chat": "Chat", "stats": "Stats", "history": "Geschichte", "saved": "Gespeichert",
-           "login": "Anmelden", "register": "Registrieren", "logout": "Abmelden", "username": "Benutzername",
-           "password": "Passwort", "dark_mode": "Dunkelmodus", "light_mode": "Hellmodus",
-           "share": "Teilen", "save": "Speichern", "log": "Erinnerung", "find_places": "Orte finden",
-           "quick_idea": "Schnelle Idee", "full_itinerary": "Reiseplan", "send": "Senden",
-           "type_message": "Fragen Sie mich nach Date-Ideen...", "your_code": "Ihr Code",
-           "enter_code": "Code Ihres Partners", "connect": "Verbinden", "matches": "Übereinstimmungen",
-           "no_matches": "Noch keine Übereinstimmungen.", "clear_all": "Alle löschen",
-           "add_to_calendar": "Zum Kalender", "whatsapp": "WhatsApp", "email": "Email"},
-}
-
 def get_season():
     m = datetime.now().month
     if m in [3,4,5]: return "spring"
@@ -233,7 +177,6 @@ def logout():
     session.pop("user", None)
     return jsonify({"success": True})
 
-# ── Data Routes ───────────────────────────────────────────────
 @app.route("/api/ideas")
 def get_ideas(): return jsonify(IDEAS)
 
@@ -264,26 +207,10 @@ def add_history():
         db.commit()
     return jsonify({"success": True})
 
-@app.route("/api/userdata")
-def get_userdata():
-    u = session.get("user")
-    if not u: return jsonify({"error": "Not logged in"}), 401
-    with get_db() as db:
-        user = db.execute("SELECT * FROM users WHERE username=?", (u,)).fetchone()
-        saved = [json.loads(r["idea"]) for r in db.execute("SELECT idea FROM saved_ideas WHERE username=? ORDER BY saved_at", (u,)).fetchall()]
-        history = [json.loads(r["memory"]) for r in db.execute("SELECT memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall()]
-    return jsonify({"saved": saved, "history": history, "share_code": user["share_code"]})
-
-# ── AI Routes ─────────────────────────────────────────────────
 @app.route("/api/ai/quick", methods=["POST"])
 def ai_quick():
     topic = request.json.get("topic","")
-    u = session.get("user")
-    history_ctx = ""
-    if u and USERS[u]["history"]:
-        done = [h["title"] for h in USERS[u]["history"][-5:]]
-        history_ctx = f' Avoid these already done: {", ".join(done)}.'
-    prompt = (f'Generate a creative romantic date idea based on: "{topic}".{history_ctx} '
+    prompt = (f'Generate a creative romantic date idea based on: "{topic}". '
               'Return ONLY valid JSON: {"title":"...","desc":"...","emoji":"...","duration":"...","cost":"...","tip":"...","steps":["...","...","..."]}')
     result = call_gemini(prompt)
     if not result: return jsonify({"error": "AI unavailable"}), 500
@@ -306,24 +233,6 @@ def ai_places():
     city = request.json.get("city","")
     prompt = (f'Suggest 6 real date-worthy places in {city} for couples. '
               'Return ONLY a JSON array: [{"name":"...","type":"...","desc":"one sentence","emoji":"...","priceRange":"$"}]')
-    result = call_gemini(prompt)
-    if not result: return jsonify({"error": "AI unavailable"}), 500
-    try: return jsonify(json.loads(result))
-    except: return jsonify({"error": "Parse error"}), 500
-
-@app.route("/api/ai/recommend", methods=["POST"])
-def ai_recommend():
-    u = session.get("user")
-    history, saved = [], []
-    if u:
-        with get_db() as db:
-            history = [json.loads(r["memory"]) for r in db.execute("SELECT memory FROM date_history WHERE username=? ORDER BY logged_at DESC LIMIT 10", (u,)).fetchall()]
-    cats = [h.get("cat","surprise") for h in history]
-    fav_cat = max(set(cats), key=cats.count) if cats else "surprise"
-    done_titles = [h["title"] for h in history]
-    prompt = (f'Based on someone who loves {fav_cat} dates and has done: {", ".join(done_titles[-3:]) if done_titles else "nothing yet"}, '
-              f'suggest 3 personalized date ideas they have NOT done yet. '
-              'Return ONLY a JSON array: [{"title":"...","desc":"...","emoji":"...","duration":"...","cost":"...","cat":"...","reason":"why this suits them"}]')
     result = call_gemini(prompt)
     if not result: return jsonify({"error": "AI unavailable"}), 500
     try: return jsonify(json.loads(result))
@@ -356,7 +265,6 @@ def ai_chat():
 @app.route("/")
 def index(): return render_template_string(HTML)
 
-# ── HTML ──────────────────────────────────────────────────────
 HTML = """
 <!DOCTYPE html>
 <html lang="en">
@@ -371,27 +279,31 @@ HTML = """
 <meta name="apple-mobile-web-app-title" content="DateSpark">
 <style>
 :root{--bg:#0d0d0d;--surface:#1a1a2e;--text:#ffffff;--subtext:#9ca3af;--border:#ffffff15;--input:#1f2937;--card-overlay:rgba(0,0,0,0.3)}
-.light{--bg:#f9fafb;--surface:#ffffff;--text:#111827;--subtext:#6b7280;--border:#e5e7eb;--input:#f3f4f6;--card-overlay:rgba(0,0,0,0.15)}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;transition:background-color .3s,color .3s}
+.light{--bg:#f0f0f5;--surface:#ffffff;--text:#111827;--subtext:#6b7280;--border:#d1d5db;--input:#e5e7eb;--card-overlay:rgba(0,0,0,0.15)}
+.light header,.light nav{background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.light .surface{background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.light .swipe-btn{background:#ffffff}
+.light .memory-card,.light .stat-card{background:#ffffff}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
 header{background:var(--surface);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
 header h1{font-size:18px;color:#f43f5e;font-weight:900}
 .header-right{display:flex;gap:8px;align-items:center}
-.icon-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:4px;border-radius:8px}
+.icon-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:4px}
 nav{background:var(--surface);display:flex;border-top:1px solid var(--border);position:sticky;bottom:0;z-index:100;overflow-x:auto}
-nav button{flex:1;min-width:44px;padding:10px 2px;background:none;border:none;color:var(--subtext);font-size:16px;cursor:pointer;transition:color .2s;white-space:nowrap}
+nav button{flex:1;min-width:44px;padding:12px 2px;background:none;border:none;color:var(--subtext);font-size:20px;cursor:pointer;white-space:nowrap}
 nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .screen{display:none;flex:1;flex-direction:column;padding:14px;gap:12px;overflow-y:auto;padding-bottom:80px}
 .screen.active{display:flex}
+/* Cards */
 .card{border-radius:20px;padding:18px;position:relative;overflow:hidden;margin-bottom:10px}
-.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.card-emoji{font-size:36px;line-height:1}
-.card-meta{text-align:right;font-size:11px;color:rgba(255,255,255,0.7)}
-.card-cost{background:var(--card-overlay);border-radius:20px;padding:2px 8px;font-weight:700;margin-bottom:3px;display:inline-block;color:#fff}
 .card h2{font-size:17px;font-weight:900;margin-bottom:5px;color:#fff}
-.card p{font-size:12px;color:rgba(255,255,255,0.82);line-height:1.5}
+.card p{font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.card-cost{background:rgba(0,0,0,0.3);border-radius:20px;padding:2px 8px;font-weight:700;color:#fff;font-size:11px;display:inline-block}
+.card-meta{text-align:right;font-size:11px;color:rgba(255,255,255,0.7)}
 .card-btns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
-.card-btns button{padding:6px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.card-btns button{padding:7px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.22);color:#fff;font-size:11px;font-weight:700;cursor:pointer}
 .cat-home{background:linear-gradient(135deg,#e11d48,#be185d)}
 .cat-city{background:linear-gradient(135deg,#7c3aed,#6d28d9)}
 .cat-outdoor{background:linear-gradient(135deg,#059669,#047857)}
@@ -400,28 +312,30 @@ nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .cat-travel{background:linear-gradient(135deg,#0284c7,#0369a1)}
 .cat-surprise{background:linear-gradient(135deg,#c026d3,#a21caf)}
 .cat-ai{background:linear-gradient(135deg,#f43f5e,#e11d48)}
+/* Pills */
 .pills{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .pills::-webkit-scrollbar{display:none}
-.pill{flex-shrink:0;padding:7px 12px;border-radius:20px;border:none;background:var(--input);color:var(--text);font-size:11px;font-weight:700;cursor:pointer}
-.pill.active{background:#f43f5e;color:#fff;transform:scale(1.05)}
-.swipe-area{position:relative;height:230px;margin-bottom:8px}
-.swipe-card{position:absolute;inset:0;border-radius:22px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none}
+.pill{flex-shrink:0;padding:7px 12px;border-radius:20px;border:none;background:var(--input);color:var(--text);font-size:12px;font-weight:700;cursor:pointer}
+.pill.active{background:#f43f5e;color:#fff}
+/* Swipe */
+.swipe-area{position:relative;height:250px;margin-bottom:8px}
+.swipe-card{position:absolute;inset:0;border-radius:22px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none;overflow:hidden}
 .swipe-card.back1{transform:scale(0.95) translateY(8px);opacity:.7;z-index:1;pointer-events:none}
 .swipe-card.back2{transform:scale(0.90) translateY(16px);opacity:.4;z-index:0;pointer-events:none}
 .swipe-card.front{z-index:2}
 .swipe-btns{display:flex;justify-content:center;gap:16px;align-items:center}
-.swipe-btn{width:54px;height:54px;border-radius:50%;border:2px solid var(--border);background:var(--surface);font-size:22px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.swipe-btn{width:56px;height:56px;border-radius:50%;border:2px solid var(--border);background:var(--surface);font-size:22px;cursor:pointer;transition:transform .2s;display:flex;align-items:center;justify-content:center}
 .swipe-btn:hover{transform:scale(1.1)}
 .swipe-btn.like{border-color:#10b981}
 .swipe-btn.skip{border-color:#ef4444}
-.swipe-btn.shuf{width:42px;height:42px;font-size:16px}
+.swipe-btn.shuf{width:44px;height:44px;font-size:18px}
 .overlay{position:absolute;top:14px;padding:5px 12px;border-radius:10px;font-weight:900;font-size:15px;border:2px solid #fff;opacity:0;pointer-events:none;z-index:10}
 .overlay.like{left:14px;background:#10b981;transform:rotate(-15deg)}
 .overlay.skip{right:14px;background:#ef4444;transform:rotate(15deg)}
+/* Forms */
 input,textarea,select{width:100%;background:var(--input);border:1px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:13px;outline:none;resize:none;font-family:inherit}
 input:focus,textarea:focus{border-color:#f43f5e}
-.btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;color:#fff;transition:all .2s}
-.btn:hover{opacity:.9;transform:translateY(-1px)}
+.btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;color:#fff}
 .btn-pink{background:#f43f5e}
 .btn-purple{background:#7c3aed}
 .btn-gray{background:var(--input);color:var(--text)}
@@ -435,8 +349,8 @@ input:focus,textarea:focus{border-color:#f43f5e}
 /* Chat */
 .chat-box{height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:8px;background:var(--bg);border-radius:12px;margin-bottom:8px}
 .chat-msg{max-width:80%;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.4}
-.chat-msg.user{background:#f43f5e;color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.chat-msg.ai{background:var(--surface);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
+.chat-msg.user{background:#f43f5e;color:#fff;align-self:flex-end}
+.chat-msg.ai{background:var(--surface);color:var(--text);align-self:flex-start}
 .chat-input-row{display:flex;gap:8px}
 .chat-input-row input{flex:1}
 .chat-input-row button{width:44px;flex-shrink:0;border-radius:12px;border:none;background:#f43f5e;color:#fff;font-size:18px;cursor:pointer}
@@ -446,19 +360,19 @@ input:focus,textarea:focus{border-color:#f43f5e}
 .stat-num{font-size:32px;font-weight:900;color:#f43f5e}
 .stat-label{font-size:11px;color:var(--subtext);margin-top:4px}
 .stat-bar{height:6px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden}
-.stat-bar-fill{height:100%;background:#f43f5e;border-radius:3px;transition:width 1s}
+.stat-bar-fill{height:100%;background:#f43f5e;border-radius:3px}
 /* Auth */
 .auth-container{display:flex;flex-direction:column;gap:12px;padding:20px 0}
 .auth-toggle{text-align:center;color:var(--subtext);font-size:13px;margin-top:8px}
 .auth-toggle span{color:#f43f5e;cursor:pointer;font-weight:700}
-/* Memory modal */
+/* Modal */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-box{background:var(--surface);border-radius:22px;padding:22px;width:100%;max-width:380px;border:1px solid var(--border)}
 .rating-btns{display:flex;gap:4px;margin:8px 0}
 .rating-btn{flex:1;padding:7px;background:var(--input);border:2px solid transparent;border-radius:9px;color:var(--text);font-size:10px;cursor:pointer;font-weight:700}
 .rating-btn.selected{border-color:#f43f5e;background:#f43f5e22}
 .photo-preview{width:100%;height:120px;object-fit:cover;border-radius:10px;margin-top:8px;display:none}
-/* Confetti */
+/* Misc */
 .confetti-container{position:fixed;inset:0;pointer-events:none;z-index:999;overflow:hidden}
 .confetti-piece{position:absolute;border-radius:2px;animation:fall 2.5s ease-in forwards}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
@@ -471,8 +385,7 @@ input:focus,textarea:focus{border-color:#f43f5e}
 .memory-card{background:var(--surface);border-radius:14px;padding:12px;border:1px solid var(--border);margin-bottom:10px}
 .memory-photo{width:100%;height:100px;object-fit:cover;border-radius:8px;margin-top:6px}
 .toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%);background:var(--surface);color:var(--text);padding:9px 18px;border-radius:20px;font-size:12px;font-weight:700;z-index:500;border:1px solid var(--border);white-space:nowrap}
-.user-badge{background:#f43f5e22;color:#f43f5e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
-.lang-select{width:auto;padding:5px 8px;font-size:12px;border-radius:8px}
+.lang-select{width:auto;padding:5px 8px;font-size:12px;border-radius:8px;background:var(--input);color:var(--text);border:1px solid var(--border)}
 .share-btns{display:flex;gap:8px;margin-top:8px}
 .share-btn{flex:1;padding:10px;border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;color:#fff}
 .share-btn.wa{background:#25d366}
@@ -482,22 +395,22 @@ input:focus,textarea:focus{border-color:#f43f5e}
 .reason-tag{background:#f43f5e22;color:#f43f5e;border-radius:10px;padding:3px 8px;font-size:10px;margin-top:6px;display:inline-block}
 </style>
 </head>
-<body class="">
+<body>
 <header>
   <h1>💘 <span id="app-title">DateSpark AI</span></h1>
   <div class="header-right">
     <select class="lang-select" id="lang-select" onchange="setLang(this.value)">
-      <option value="en">🇬🇧 EN</option>
-      <option value="es">🇪🇸 ES</option>
-      <option value="fr">🇫🇷 FR</option>
-      <option value="de">🇩🇪 DE</option>
+      <option value="en">EN</option>
+      <option value="es">ES</option>
+      <option value="fr">FR</option>
+      <option value="de">DE</option>
     </select>
     <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
     <div id="user-badge-area"></div>
   </div>
 </header>
 
-<!-- Auth Screen -->
+<!-- Auth -->
 <div id="screen-auth" class="screen active" style="justify-content:center">
   <div style="text-align:center;margin-bottom:20px">
     <div style="font-size:60px">💘</div>
@@ -505,24 +418,16 @@ input:focus,textarea:focus{border-color:#f43f5e}
     <p style="color:var(--subtext);font-size:13px;margin-top:4px">Your AI-powered date companion</p>
   </div>
   <div class="auth-container">
-    <div>
-      <div class="label" id="lbl-username">Username</div>
-      <input id="auth-username" placeholder="Enter username" autocomplete="username">
-    </div>
-    <div>
-      <div class="label" id="lbl-password">Password</div>
-      <input id="auth-password" type="password" placeholder="Enter password" autocomplete="current-password">
-    </div>
+    <div><div class="label">Username</div><input id="auth-username" placeholder="Enter username"></div>
+    <div><div class="label">Password</div><input id="auth-password" type="password" placeholder="Enter password"></div>
     <div id="auth-error" style="color:#ef4444;font-size:12px;display:none"></div>
     <button class="btn btn-pink" id="auth-submit-btn" onclick="submitAuth()">Login</button>
     <button class="btn btn-gray" onclick="continueGuest()">Continue as Guest</button>
-    <div class="auth-toggle">
-      <span id="auth-toggle-link" onclick="toggleAuthMode()">Don't have an account? Register</span>
-    </div>
+    <div class="auth-toggle"><span id="auth-toggle-link" onclick="toggleAuthMode()">Don't have an account? Register</span></div>
   </div>
 </div>
 
-<!-- Spark Screen -->
+<!-- Spark -->
 <div id="screen-spark" class="screen">
   <div class="pills" id="cat-pills"></div>
   <div class="swipe-area" id="swipe-area"></div>
@@ -543,34 +448,29 @@ input:focus,textarea:focus{border-color:#f43f5e}
 <!-- Couples -->
 <div id="screen-couples" class="screen">
   <div class="surface">
-    <div class="label" id="lbl-your-code">Your Share Code</div>
+    <div class="label">Your Share Code</div>
     <div class="code-display" id="my-code">------</div>
     <p style="font-size:11px;color:var(--subtext)">Share with your partner to sync swipes!</p>
   </div>
   <div class="surface">
-    <div class="label" id="lbl-enter-code">Enter Partner's Code</div>
+    <div class="label">Enter Partner's Code</div>
     <input id="partner-code" maxlength="6" placeholder="XXXXXX" style="text-transform:uppercase;letter-spacing:.2em;font-size:18px;font-weight:900;text-align:center">
-    <button class="btn btn-pink" style="margin-top:10px" onclick="connectPartner()" id="connect-btn">Connect 💑</button>
+    <button class="btn btn-pink" style="margin-top:10px" onclick="connectPartner()">Connect 💑</button>
     <div id="connect-status" style="font-size:12px;margin-top:6px"></div>
   </div>
-  <div class="label" id="lbl-matches">Matches</div>
+  <div class="label">Matches</div>
   <div id="matches-list"></div>
 </div>
 
-<!-- AI Screen -->
+<!-- AI -->
 <div id="screen-ai" class="screen">
   <div class="surface">
     <div class="label">🤖 AI Date Planner</div>
     <textarea id="ai-topic" rows="3" placeholder="e.g. We love hiking & sushi, 1-year anniversary, budget $150..."></textarea>
     <div class="btn-row" style="margin-top:10px">
-      <button class="btn btn-pink" id="quick-btn" onclick="aiQuick()">💡 Quick Idea</button>
-      <button class="btn btn-purple" id="itin-btn" onclick="aiItinerary()">🗓️ Full Itinerary</button>
+      <button class="btn btn-pink" onclick="aiQuick()">💡 Quick Idea</button>
+      <button class="btn btn-purple" onclick="aiItinerary()">🗓️ Full Itinerary</button>
     </div>
-  </div>
-  <div class="surface">
-    <div class="label">🎯 Personalized For You</div>
-    <button class="btn btn-green" onclick="aiRecommend()">✨ Get Recommendations</button>
-    <div id="recommend-result" style="margin-top:10px"></div>
   </div>
   <div class="surface">
     <div class="label">📍 Find Date Spots</div>
@@ -580,12 +480,12 @@ input:focus,textarea:focus{border-color:#f43f5e}
   <div id="ai-result"></div>
 </div>
 
-<!-- Chat Screen -->
+<!-- Chat -->
 <div id="screen-chat" class="screen">
   <div class="surface" style="flex:1;display:flex;flex-direction:column">
     <div class="label">💬 Date Ideas Assistant</div>
     <div class="chat-box" id="chat-box">
-      <div class="chat-msg ai">Hi! 👋 I'm your date ideas assistant. Ask me anything — budget ideas, romantic spots, anniversary plans... I'm here to help! 💘</div>
+      <div class="chat-msg ai">Hi! 👋 Ask me anything about date ideas — budget, romantic spots, anniversary plans... I'm here to help! 💘</div>
     </div>
     <div class="chat-input-row">
       <input id="chat-input" placeholder="Ask me about date ideas..." onkeydown="if(event.key==='Enter')sendChat()">
@@ -594,7 +494,7 @@ input:focus,textarea:focus{border-color:#f43f5e}
   </div>
 </div>
 
-<!-- Stats Screen -->
+<!-- Stats -->
 <div id="screen-stats" class="screen">
   <div class="label">📊 Your Date Stats</div>
   <div class="stat-grid" id="stat-grid"></div>
@@ -608,19 +508,19 @@ input:focus,textarea:focus{border-color:#f43f5e}
   </div>
 </div>
 
-<!-- History Screen -->
+<!-- History -->
 <div id="screen-history" class="screen">
   <div id="history-list"></div>
 </div>
 
-<!-- Saved Screen -->
+<!-- Saved -->
 <div id="screen-saved" class="screen">
   <div id="saved-list"></div>
 </div>
 
 <nav id="main-nav" style="display:none">
   <button onclick="showTab('spark',this)">⚡</button>
-  <button onclick="showTab('seasonal',this)" id="seasonal-tab-btn">🌸</button>
+  <button onclick="showTab('seasonal',this)" id="seasonal-tab-btn">❄️</button>
   <button onclick="showTab('couples',this)">💑</button>
   <button onclick="showTab('ai',this)">🤖</button>
   <button onclick="showTab('chat',this)">💬</button>
@@ -640,47 +540,6 @@ let dragStartX=null, currentDrag=0, isDragging=false;
 let selectedRating=5, currentMemoryIdea=null, currentMemoryPhoto=null;
 let lang='en', darkMode=true, authMode='login';
 
-const T = {
-  en:{title:"DateSpark AI",spark:"⚡",seasonal:"🌸",couples:"💑",ai:"🤖",chat:"💬",stats:"📊",history:"📖",saved:"❤️",
-      login:"Login",register:"Register",logout:"Logout",username:"Username",password:"Password",
-      save:"❤️ Save",log:"📖 Log",share:"Share",find_places:"🗺️ Find Places",
-      quick_idea:"💡 Quick Idea",full_itinerary:"🗓️ Full Itinerary",send:"➤",
-      type_message:"Ask me about date ideas...",your_code:"Your Share Code",
-      enter_code:"Enter Partner's Code",connect:"Connect 💑",matches:"Matches",
-      no_matches:"No matches yet! Go swipe together.",clear_all:"🗑 Clear All",
-      add_to_calendar:"📅 Calendar",whatsapp:"WhatsApp",email:"Email",copy:"Copy",
-      guest:"Continue as Guest",no_account:"Don't have an account?",have_account:"Already have an account?"},
-  es:{title:"DateSpark IA",spark:"⚡",seasonal:"🌸",couples:"💑",ai:"🤖",chat:"💬",stats:"📊",history:"📖",saved:"❤️",
-      login:"Entrar",register:"Registrar",logout:"Salir",username:"Usuario",password:"Contraseña",
-      save:"❤️ Guardar",log:"📖 Registrar",share:"Compartir",find_places:"🗺️ Buscar",
-      quick_idea:"💡 Idea Rápida",full_itinerary:"🗓️ Itinerario",send:"➤",
-      type_message:"Pregúntame sobre citas...",your_code:"Tu Código",
-      enter_code:"Código de tu Pareja",connect:"Conectar 💑",matches:"Coincidencias",
-      no_matches:"Sin coincidencias todavía.",clear_all:"🗑 Borrar Todo",
-      add_to_calendar:"📅 Calendario",whatsapp:"WhatsApp",email:"Email",copy:"Copiar",
-      guest:"Continuar como Invitado",no_account:"¿No tienes cuenta?",have_account:"¿Ya tienes cuenta?"},
-  fr:{title:"DateSpark IA",spark:"⚡",seasonal:"🌸",couples:"💑",ai:"🤖",chat:"💬",stats:"📊",history:"📖",saved:"❤️",
-      login:"Connexion",register:"S'inscrire",logout:"Déconnexion",username:"Utilisateur",password:"Mot de passe",
-      save:"❤️ Sauver",log:"📖 Journal",share:"Partager",find_places:"🗺️ Trouver",
-      quick_idea:"💡 Idée Rapide",full_itinerary:"🗓️ Itinéraire",send:"➤",
-      type_message:"Demandez des idées...",your_code:"Votre Code",
-      enter_code:"Code de votre Partenaire",connect:"Connecter 💑",matches:"Correspondances",
-      no_matches:"Pas encore de correspondances.",clear_all:"🗑 Tout Effacer",
-      add_to_calendar:"📅 Calendrier",whatsapp:"WhatsApp",email:"Email",copy:"Copier",
-      guest:"Continuer en Invité",no_account:"Pas de compte?",have_account:"Déjà un compte?"},
-  de:{title:"DateSpark KI",spark:"⚡",seasonal:"🌸",couples:"💑",ai:"🤖",chat:"💬",stats:"📊",history:"📖",saved:"❤️",
-      login:"Anmelden",register:"Registrieren",logout:"Abmelden",username:"Benutzername",password:"Passwort",
-      save:"❤️ Speichern",log:"📖 Erinnerung",share:"Teilen",find_places:"🗺️ Suchen",
-      quick_idea:"💡 Schnelle Idee",full_itinerary:"🗓️ Reiseplan",send:"➤",
-      type_message:"Fragen Sie nach Date-Ideen...",your_code:"Ihr Code",
-      enter_code:"Code Ihres Partners",connect:"Verbinden 💑",matches:"Übereinstimmungen",
-      no_matches:"Noch keine Übereinstimmungen.",clear_all:"🗑 Alle löschen",
-      add_to_calendar:"📅 Kalender",whatsapp:"WhatsApp",email:"Email",copy:"Kopieren",
-      guest:"Als Gast fortfahren",no_account:"Kein Konto?",have_account:"Bereits ein Konto?"},
-};
-
-function t(key){ return (T[lang]||T.en)[key]||key; }
-
 // ── Theme ──────────────────────────────────────────────────
 function toggleTheme(){
   darkMode=!darkMode;
@@ -689,21 +548,15 @@ function toggleTheme(){
 }
 
 // ── Language ───────────────────────────────────────────────
-function setLang(l){ lang=l; applyTranslations(); }
-function applyTranslations(){
-  document.getElementById('app-title').textContent=t('title');
-  document.querySelectorAll('nav button').forEach((b,i)=>{
-    const keys=['spark','seasonal','couples','ai','chat','stats','history','saved'];
-    b.textContent=t(keys[i]);
-  });
-}
+function setLang(l){ lang=l; }
 
 // ── Auth ───────────────────────────────────────────────────
 function toggleAuthMode(){
   authMode=authMode==='login'?'register':'login';
   const isLogin=authMode==='login';
-  document.getElementById('auth-submit-btn').textContent=isLogin?t('login'):t('register');
-  document.getElementById('auth-toggle-link').textContent=isLogin?`${t('no_account')} ${t('register')}`:`${t('have_account')} ${t('login')}`;
+  document.getElementById('auth-submit-btn').textContent=isLogin?'Login':'Register';
+  document.getElementById('auth-toggle-link').textContent=isLogin
+    ?'Don\'t have an account? Register':'Already have an account? Login';
 }
 
 async function submitAuth(){
@@ -711,8 +564,8 @@ async function submitAuth(){
   const p=document.getElementById('auth-password').value;
   const err=document.getElementById('auth-error');
   if(!u||!p){err.textContent='Please fill in all fields';err.style.display='block';return;}
-  const endpoint=authMode==='login'?'/api/login':'/api/register';
-  const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+  const r=await fetch(authMode==='login'?'/api/login':'/api/register',
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
   const data=await r.json();
   if(data.error){err.textContent=data.error;err.style.display='block';return;}
   currentUser=data.username;
@@ -722,20 +575,17 @@ async function submitAuth(){
   enterApp();
 }
 
-function continueGuest(){
-  currentUser=null;
-  enterApp();
-}
+function continueGuest(){ currentUser=null; enterApp(); }
 
 function enterApp(){
   document.getElementById('screen-auth').classList.remove('active');
   document.getElementById('main-nav').style.display='flex';
   document.getElementById('user-badge-area').innerHTML=currentUser
-    ?`<span class="user-badge">👤 ${currentUser}</span>`
-    :`<button class="icon-btn" onclick="showAuthScreen()" title="Login">🔑</button>`;
+    ?`<span style="background:#f43f5e22;color:#f43f5e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">👤 ${currentUser}</span>`
+    :`<button class="icon-btn" onclick="showAuthScreen()">🔑</button>`;
   document.getElementById('my-code').textContent=shareCode;
   init();
-  showTab('spark',document.querySelector('nav button'));
+  showTab('spark', document.querySelector('#main-nav button'));
 }
 
 function showAuthScreen(){
@@ -746,22 +596,28 @@ function showAuthScreen(){
 
 // ── Init ───────────────────────────────────────────────────
 async function init(){
-  const r=await fetch('/api/ideas'); IDEAS=await r.json();
-  buildDeck(); renderCatPills(); renderSwipeCards();
-  loadSeasonal(); renderMatches(); updateNavBadges();
+  const r=await fetch('/api/ideas');
+  IDEAS=await r.json();
+  buildDeck();
+  renderCatPills();
+  renderSwipeCards();
+  loadSeasonal();
+  renderMatches();
+  updateNavBadges();
 }
 
 function buildDeck(cat='all'){
   activeCat=cat;
-  let all=Object.entries(IDEAS).flatMap(([c,arr])=>arr.map(i=>({...i,cat:c})));
-  deck=cat==='all'?all:all.filter(i=>i.cat===cat);
+  const all=Object.entries(IDEAS).flatMap(([c,arr])=>arr.map(i=>({...i,cat:c})));
+  deck=cat==='all'?[...all]:all.filter(i=>i.cat===cat);
   deck.sort(()=>Math.random()-0.5);
 }
 
 // ── Cat Pills ──────────────────────────────────────────────
 function renderCatPills(){
-  const cats=[['all','🌀'],['home','🏠'],['city','🌆'],['outdoor','🌿'],
-              ['budget','💸'],['luxury','💎'],['travel','🌍'],['surprise','✨']];
+  const cats=[['all','🌀 All'],['home','🏠 Home'],['city','🌆 City'],
+              ['outdoor','🌿 Out'],['budget','💸'],['luxury','💎'],
+              ['travel','🌍'],['surprise','✨']];
   document.getElementById('cat-pills').innerHTML=cats.map(([id,lbl])=>
     `<button class="pill ${id===activeCat?'active':''}" onclick="setCat('${id}',this)">${lbl}</button>`
   ).join('');
@@ -769,8 +625,11 @@ function renderCatPills(){
 
 function setCat(cat,btn){
   document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active'); buildDeck(cat); renderSwipeCards();
+  btn.classList.add('active');
+  buildDeck(cat);
+  renderSwipeCards();
 }
+
 function reshuffleDeck(){ buildDeck(activeCat); renderSwipeCards(); }
 
 // ── Swipe Cards ────────────────────────────────────────────
@@ -781,31 +640,46 @@ function renderSwipeCards(){
     area.innerHTML='<div class="empty"><div>🎉</div><p>No more ideas!<br>Tap 🔀 to reshuffle</p></div>';
     return;
   }
-  [2,1,0].forEach(i=>{
-    if(!deck[i])return;
-    area.appendChild(makeSwipeCard(deck[i],i));
-  });
-  const front=area.querySelector('.front');
-  if(front)attachDrag(front);
+  // Back cards
+  if(deck[2]){
+    const b2=document.createElement('div');
+    b2.className=`swipe-card back2 cat-${deck[2].cat||'surprise'}`;
+    area.appendChild(b2);
+  }
+  if(deck[1]){
+    const b1=document.createElement('div');
+    b1.className=`swipe-card back1 cat-${deck[1].cat||'surprise'}`;
+    area.appendChild(b1);
+  }
+  // Front card
+  const card=makeCard(deck[0]);
+  area.appendChild(card);
+  attachDrag(card);
 }
 
-function makeSwipeCard(idea,idx){
+function makeCard(idea){
   const d=document.createElement('div');
-  d.className=`swipe-card cat-${idea.cat||'surprise'} ${idx===0?'front':idx===1?'back1':'back2'}`;
+  d.className=`swipe-card front cat-${idea.cat||'surprise'}`;
+  const ideaStr=JSON.stringify(idea).replace(/"/g,'&quot;');
   d.innerHTML=`
     <div class="overlay like">LOVE IT 💚</div>
     <div class="overlay skip">SKIP ❌</div>
-    <div>
-      <div class="card-top">
-        <span style="font-size:36px">${idea.emoji}</span>
-        <div class="card-meta"><div class="card-cost">${idea.cost}</div><div>${idea.duration}</div></div>
+    <div style="flex:1;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <span style="font-size:38px;line-height:1">${idea.emoji||'✨'}</span>
+        <div style="text-align:right">
+          <div class="card-cost">${idea.cost||''}</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px">${idea.duration||''}</div>
+        </div>
       </div>
-      <h2 style="color:#fff">${idea.title}</h2>
-      <p style="margin-top:5px">${idea.desc}</p>
+      <div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:6px">${idea.title||''}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5">${idea.desc||''}</div>
     </div>
-    <div class="card-btns">
-      <button onclick='saveIdea(${JSON.stringify(idea).replace(/"/g,"&quot;")})'>${t('save')}</button>
-      <button onclick='shareIdea(${JSON.stringify(idea).replace(/"/g,"&quot;")})'>🔗 ${t('share')}</button>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-shrink:0">
+      <button onclick="event.stopPropagation();saveIdea(JSON.parse(this.dataset.idea))" data-idea="${ideaStr}"
+        style="flex:1;padding:8px;border:none;border-radius:10px;background:rgba(255,255,255,0.22);color:#fff;font-size:11px;font-weight:700;cursor:pointer">❤️ Save</button>
+      <button onclick="event.stopPropagation();shareIdea(JSON.parse(this.dataset.idea))" data-idea="${ideaStr}"
+        style="flex:1;padding:8px;border:none;border-radius:10px;background:rgba(255,255,255,0.22);color:#fff;font-size:11px;font-weight:700;cursor:pointer">🔗 Share</button>
     </div>`;
   return d;
 }
@@ -819,23 +693,27 @@ function attachDrag(el){
   document.addEventListener('touchend',onDragEnd);
 }
 
-function onDrag(e){if(!isDragging||dragStartX===null)return;currentDrag=e.clientX-dragStartX;updateDragVisual();}
-function onDragTouch(e){if(!isDragging||dragStartX===null)return;currentDrag=e.touches[0].clientX-dragStartX;updateDragVisual();}
+function onDrag(e){if(!isDragging)return;currentDrag=e.clientX-dragStartX;updateDragVisual();}
+function onDragTouch(e){if(!isDragging)return;currentDrag=e.touches[0].clientX-dragStartX;updateDragVisual();}
 
 function updateDragVisual(){
-  const front=document.querySelector('.swipe-card.front');
-  if(!front)return;
-  front.style.transform=`translateX(${currentDrag}px) rotate(${currentDrag/18}deg)`;
-  front.querySelectorAll('.overlay').forEach(o=>o.style.opacity=0);
-  if(currentDrag>30)front.querySelector('.overlay.like').style.opacity=Math.min(currentDrag/80,1);
-  if(currentDrag<-30)front.querySelector('.overlay.skip').style.opacity=Math.min(-currentDrag/80,1);
+  const f=document.querySelector('.swipe-card.front');
+  if(!f)return;
+  f.style.transform=`translateX(${currentDrag}px) rotate(${currentDrag/18}deg)`;
+  const lo=f.querySelector('.overlay.like'), so=f.querySelector('.overlay.skip');
+  if(lo) lo.style.opacity=currentDrag>30?Math.min(currentDrag/80,1):0;
+  if(so) so.style.opacity=currentDrag<-30?Math.min(-currentDrag/80,1):0;
 }
 
 function onDragEnd(){
-  if(!isDragging)return; isDragging=false;
-  if(Math.abs(currentDrag)>80)swipe(currentDrag>0?'right':'left');
-  else{const f=document.querySelector('.swipe-card.front');if(f){f.style.transform='';f.querySelectorAll('.overlay').forEach(o=>o.style.opacity=0);}}
-  dragStartX=null;currentDrag=0;
+  if(!isDragging)return;
+  isDragging=false;
+  if(Math.abs(currentDrag)>80) swipe(currentDrag>0?'right':'left');
+  else{
+    const f=document.querySelector('.swipe-card.front');
+    if(f){f.style.transform='';f.querySelectorAll('.overlay').forEach(o=>o.style.opacity=0);}
+  }
+  dragStartX=null; currentDrag=0;
   document.removeEventListener('mousemove',onDrag);
   document.removeEventListener('touchmove',onDragTouch);
   document.removeEventListener('mouseup',onDragEnd);
@@ -846,12 +724,14 @@ function swipe(dir){
   if(!deck.length)return;
   const idea=deck[0];
   const front=document.querySelector('.swipe-card.front');
-  if(front){front.classList.add(dir==='right'?'flying-out-right':'flying-out-left');setTimeout(()=>{deck.shift();renderSwipeCards();},300);}
-  else{deck.shift();renderSwipeCards();}
+  if(front){
+    front.classList.add(dir==='right'?'flying-out-right':'flying-out-left');
+    setTimeout(()=>{deck.shift();renderSwipeCards();},300);
+  } else { deck.shift(); renderSwipeCards(); }
   if(dir==='right'){
     saveIdea(idea);
     if(couplesMode&&Math.random()>0.4&&!matches.find(m=>m.title===idea.title)){
-      matches.push(idea);showConfetti();showMatchPopup(idea);renderMatches();
+      matches.push(idea); showConfetti(); showMatchPopup(idea); renderMatches();
     }
   }
   updateNavBadges();
@@ -861,30 +741,30 @@ function swipe(dir){
 async function saveIdea(idea){
   if(saved.find(s=>s.title===idea.title)){showToast('Already saved! ❤️');return;}
   saved.push(idea);
-  if(currentUser){await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idea})});}
-  updateNavBadges();showToast('Saved! ❤️');
+  if(currentUser) await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idea})});
+  updateNavBadges(); showToast('Saved! ❤️');
 }
 
 function updateNavBadges(){
-  const btns=document.querySelectorAll('nav button');
-  if(btns[7])btns[7].textContent=saved.length?`❤️${saved.length}`:'❤️';
-  if(btns[6])btns[6].textContent=history.length?`📖${history.length}`:'📖';
+  const btns=document.querySelectorAll('#main-nav button');
+  if(btns[7]) btns[7].textContent=saved.length?`❤️${saved.length}`:'❤️';
+  if(btns[6]) btns[6].textContent=history.length?`📖${history.length}`:'📖';
 }
 
 // ── Share ──────────────────────────────────────────────────
 function shareIdea(idea){
-  const text=`💘 Date Idea: ${idea.emoji} ${idea.title}\n${idea.desc}\n⏱ ${idea.duration} | 💰 ${idea.cost}\n\nvia DateSpark AI`;
+  const text=`💘 ${idea.title}\n${idea.desc}\n⏱ ${idea.duration} | 💰 ${idea.cost}\n\nvia DateSpark AI`;
   const modal=document.createElement('div');
   modal.className='modal';
   modal.innerHTML=`<div class="modal-box">
-    <h3 style="color:#f43f5e;margin-bottom:12px">🔗 Share This Date Idea</h3>
+    <h3 style="color:#f43f5e;margin-bottom:12px">🔗 Share This Idea</h3>
     <div class="card cat-${idea.cat||'surprise'}" style="margin-bottom:12px">
       <h2>${idea.emoji} ${idea.title}</h2><p>${idea.desc}</p>
     </div>
     <div class="share-btns">
-      <button class="share-btn wa" onclick="window.open('https://wa.me/?text='+encodeURIComponent(\`${text}\`),'_blank')">📱 WhatsApp</button>
-      <button class="share-btn em" onclick="window.open('mailto:?subject=Date Idea&body='+encodeURIComponent(\`${text}\`),'_blank')">📧 Email</button>
-      <button class="share-btn cp" onclick="navigator.clipboard?.writeText(\`${text}\`);showToast('Copied!')">📋 Copy</button>
+      <button class="share-btn wa" onclick="window.open('https://wa.me/?text='+encodeURIComponent(this.dataset.t),'_blank')" data-t="${text}">📱 WhatsApp</button>
+      <button class="share-btn em" onclick="window.open('mailto:?subject=Date Idea&body='+encodeURIComponent(this.dataset.t),'_blank')" data-t="${text}">📧 Email</button>
+      <button class="share-btn cp" onclick="navigator.clipboard?.writeText(this.dataset.t);showToast('Copied!')" data-t="${text}">📋 Copy</button>
     </div>
     <button class="btn btn-gray" style="margin-top:10px" onclick="this.closest('.modal').remove()">Close</button>
   </div>`;
@@ -892,166 +772,157 @@ function shareIdea(idea){
 }
 
 function addToCalendar(idea){
-  const title=encodeURIComponent(`💘 ${idea.title}`);
+  const title=encodeURIComponent('💘 '+idea.title);
   const details=encodeURIComponent(idea.desc);
-  const date=new Date();
-  date.setDate(date.getDate()+7);
-  const dateStr=date.toISOString().replace(/-|:|\.\d\d\d/g,'');
-  const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${dateStr}/${dateStr}`;
-  window.open(url,'_blank');
+  const d=new Date(); d.setDate(d.getDate()+7);
+  const ds=d.toISOString().replace(/-|:|\.\d\d\d/g,'');
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${ds}/${ds}`,'_blank');
 }
 
 // ── Seasonal ───────────────────────────────────────────────
 async function loadSeasonal(){
-  const r=await fetch('/api/seasonal');
-  const {season,ideas}=await r.json();
-  const icons={winter:'❄️',spring:'🌸',summer:'☀️',autumn:'🍂'};
-  document.getElementById('seasonal-tab-btn').textContent=icons[season];
-  document.getElementById('seasonal-header').innerHTML=`
-    <div style="text-align:center;margin-bottom:12px">
-      <div style="font-size:44px">${icons[season]}</div>
-      <h2 style="font-size:19px;font-weight:900;color:#f43f5e;margin:6px 0">${season.charAt(0).toUpperCase()+season.slice(1)} Dates</h2>
-    </div>`;
-  document.getElementById('seasonal-cards').innerHTML=ideas.map(i=>
-    `<div class="card cat-${i.cat}">
-       <div class="card-top"><span class="card-emoji">${i.emoji}</span>
-         <div class="card-meta"><div class="card-cost">${i.cost}</div><div>${i.duration}</div></div>
-       </div>
-       <h2>${i.title}</h2><p>${i.desc}</p>
-       <div class="card-btns">
-         <button onclick='saveIdea(${JSON.stringify(i)})'>${t('save')}</button>
-         <button onclick='shareIdea(${JSON.stringify(i)})'>🔗 ${t('share')}</button>
-         <button onclick='addToCalendar(${JSON.stringify(i)})'>${t('add_to_calendar')}</button>
-       </div>
-     </div>`
-  ).join('');
+  try {
+    const r=await fetch('/api/seasonal');
+    const {season,ideas}=await r.json();
+    const icons={winter:'❄️',spring:'🌺',summer:'☀️',autumn:'🍂'};
+    const icon=icons[season]||'❄️';
+    document.getElementById('seasonal-tab-btn').textContent=icon;
+    document.getElementById('seasonal-header').innerHTML=`
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:48px">${icon}</div>
+        <h2 style="font-size:20px;font-weight:900;color:#f43f5e;margin:8px 0">${season.charAt(0).toUpperCase()+season.slice(1)} Dates</h2>
+      </div>`;
+    document.getElementById('seasonal-cards').innerHTML=ideas.map(i=>{
+      const is=JSON.stringify(i).replace(/"/g,'&quot;');
+      return `<div class="card cat-${i.cat||'surprise'}" style="margin-bottom:12px">
+        <div class="card-top">
+          <span style="font-size:36px">${i.emoji}</span>
+          <div class="card-meta"><div class="card-cost">${i.cost}</div><div>${i.duration}</div></div>
+        </div>
+        <div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:6px">${i.title}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5;margin-bottom:10px">${i.desc}</div>
+        <div class="card-btns">
+          <button onclick="saveIdea(JSON.parse(this.dataset.i))" data-i="${is}">❤️ Save</button>
+          <button onclick="shareIdea(JSON.parse(this.dataset.i))" data-i="${is}">🔗 Share</button>
+          <button onclick="addToCalendar(JSON.parse(this.dataset.i))" data-i="${is}">📅 Calendar</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ console.error('Seasonal error:',e); }
 }
 
 // ── Couples ────────────────────────────────────────────────
 function connectPartner(){
   const code=document.getElementById('partner-code').value.trim().toUpperCase();
-  const status=document.getElementById('connect-status');
-  if(code.length===6){
-    couplesMode=true;
-    status.style.color='#10b981';
-    status.textContent='✅ Connected! Swipe on ⚡ Spark to find matches.';
-  }else{status.style.color='#ef4444';status.textContent='❌ Code must be 6 characters.';}
+  const s=document.getElementById('connect-status');
+  if(code.length===6){couplesMode=true;s.style.color='#10b981';s.textContent='✅ Connected! Swipe on ⚡ Spark.';}
+  else{s.style.color='#ef4444';s.textContent='❌ Code must be 6 characters.';}
 }
 
 function renderMatches(){
   const el=document.getElementById('matches-list');
-  if(!matches.length){el.innerHTML=`<div class="empty" style="padding:20px"><div>💭</div><p>${t('no_matches')}</p></div>`;return;}
-  el.innerHTML=matches.map(m=>`
-    <div class="card cat-${m.cat||'surprise'}">
+  if(!matches.length){el.innerHTML='<div class="empty" style="padding:20px"><div>💭</div><p>No matches yet!<br>Go swipe together.</p></div>';return;}
+  el.innerHTML=matches.map(m=>{
+    const ms=JSON.stringify(m).replace(/"/g,'&quot;');
+    return `<div class="card cat-${m.cat||'surprise'}" style="margin-bottom:10px">
       <div class="card-top"><span style="font-size:32px">${m.emoji}</span>
         <div class="card-meta"><div class="card-cost">${m.cost}</div><div>${m.duration}</div></div>
       </div>
-      <h2>${m.title}</h2><p>${m.desc}</p>
+      <div style="font-size:16px;font-weight:900;color:#fff">${m.title}</div>
       <div class="card-btns">
-        <button onclick='addToCalendar(${JSON.stringify(m)})'>${t('add_to_calendar')}</button>
-        <button onclick='shareIdea(${JSON.stringify(m)})'>🔗 ${t('share')}</button>
+        <button onclick="addToCalendar(JSON.parse(this.dataset.m))" data-m="${ms}">📅 Calendar</button>
+        <button onclick="shareIdea(JSON.parse(this.dataset.m))" data-m="${ms}">🔗 Share</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function showMatchPopup(idea){
-  const popup=document.createElement('div');
-  popup.className='modal';
-  popup.innerHTML=`<div class="modal-box" style="text-align:center">
+  const p=document.createElement('div');
+  p.className='modal';
+  p.innerHTML=`<div class="modal-box" style="text-align:center">
     <div style="font-size:48px">🎉</div>
     <h2 style="color:#f43f5e;font-size:22px;margin:10px 0">It's a Match!</h2>
-    <p>You both love:</p>
+    <p style="color:var(--subtext)">You both love:</p>
     <p style="font-size:18px;font-weight:900;margin:8px 0">${idea.emoji} ${idea.title}</p>
     <button class="btn btn-pink" style="margin-top:12px" onclick="this.closest('.modal').remove()">Let's do it! 💑</button>
   </div>`;
-  document.body.appendChild(popup);
+  document.body.appendChild(p);
 }
 
-// ── AI Features ────────────────────────────────────────────
+// ── AI ─────────────────────────────────────────────────────
 async function aiQuick(){
   const topic=document.getElementById('ai-topic').value.trim();
   if(!topic)return;
-  document.getElementById('ai-result').innerHTML='<div class="empty" style="padding:20px"><div style="animation:spin 1s linear infinite;display:inline-block">✨</div><p>Generating idea...</p></div>';
+  const el=document.getElementById('ai-result');
+  el.innerHTML='<div class="empty" style="padding:20px"><div>✨</div><p>Generating idea...</p></div>';
   const r=await fetch('/api/ai/quick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
   const data=await r.json();
-  if(data.error){document.getElementById('ai-result').innerHTML='<div class="empty"><p>⚠️ AI unavailable. Check your Gemini API key.</p></div>';return;}
+  if(data.error){el.innerHTML='<div class="empty"><p>⚠️ AI unavailable.</p></div>';return;}
   const idea={...data,cat:'surprise',emoji:data.emoji||'✨'};
-  document.getElementById('ai-result').innerHTML=`
-    <div class="card cat-ai">
-      <div class="card-top"><span style="font-size:36px">${data.emoji||'✨'}</span>
-        <div class="card-meta"><div class="card-cost">${data.cost||''}</div><div>${data.duration||''}</div></div>
-      </div>
-      <h2>${data.title}</h2><p style="margin-top:5px">${data.desc}</p>
-      ${data.steps?`<div style="margin-top:10px">${data.steps.map(s=>`<p style="font-size:12px;margin:3px 0">• ${s}</p>`).join('')}</div>`:''}
-      ${data.tip?`<div style="margin-top:8px;background:rgba(0,0,0,0.2);border-radius:8px;padding:8px"><p style="font-size:11px;color:rgba(255,255,255,0.7)">💡 ${data.tip}</p></div>`:''}
-      <div class="card-btns">
-        <button onclick='saveIdea(${JSON.stringify(idea).replace(/"/g,"&quot;")})'>${t('save')}</button>
-        <button onclick='shareIdea(${JSON.stringify(idea).replace(/"/g,"&quot;")})'>🔗 ${t('share')}</button>
-        <button onclick='addToCalendar(${JSON.stringify(idea).replace(/"/g,"&quot;")})'>${t('add_to_calendar')}</button>
-      </div>
-    </div>`;
+  const is=JSON.stringify(idea).replace(/"/g,'&quot;');
+  el.innerHTML=`<div class="card cat-ai">
+    <div class="card-top"><span style="font-size:36px">${data.emoji||'✨'}</span>
+      <div class="card-meta"><div class="card-cost">${data.cost||''}</div><div>${data.duration||''}</div></div>
+    </div>
+    <div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:6px">${data.title}</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.5">${data.desc}</div>
+    ${data.steps?`<div style="margin-top:10px">${data.steps.map(s=>`<p style="font-size:12px;margin:3px 0;color:rgba(255,255,255,0.85)">• ${s}</p>`).join('')}</div>`:''}
+    ${data.tip?`<div style="margin-top:8px;background:rgba(0,0,0,0.2);border-radius:8px;padding:8px;font-size:11px;color:rgba(255,255,255,0.7)">💡 ${data.tip}</div>`:''}
+    <div class="card-btns">
+      <button onclick="saveIdea(JSON.parse(this.dataset.i))" data-i="${is}">❤️ Save</button>
+      <button onclick="shareIdea(JSON.parse(this.dataset.i))" data-i="${is}">🔗 Share</button>
+      <button onclick="addToCalendar(JSON.parse(this.dataset.i))" data-i="${is}">📅 Calendar</button>
+    </div>
+  </div>`;
 }
 
 async function aiItinerary(){
   const topic=document.getElementById('ai-topic').value.trim();
   if(!topic)return;
-  document.getElementById('ai-result').innerHTML='<div class="empty" style="padding:20px"><div>🗓️</div><p>Building your itinerary...</p></div>';
+  const el=document.getElementById('ai-result');
+  el.innerHTML='<div class="empty" style="padding:20px"><div>🗓️</div><p>Building itinerary...</p></div>';
   const r=await fetch('/api/ai/itinerary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
   const data=await r.json();
-  if(data.error){document.getElementById('ai-result').innerHTML='<div class="empty"><p>⚠️ AI unavailable.</p></div>';return;}
-  document.getElementById('ai-result').innerHTML=`
-    <div class="surface">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:32px">${data.emoji||'🗓️'}</span>
-        <div style="text-align:right"><span style="background:#7c3aed;color:#fff;border-radius:12px;padding:3px 8px;font-size:11px;font-weight:700">${data.totalCost||''} • ${data.totalDuration||''}</span></div>
-      </div>
-      <h2 style="font-size:17px;font-weight:900;color:#f43f5e;margin-bottom:5px">${data.title}</h2>
-      <p style="font-size:12px;color:var(--subtext);margin-bottom:12px">${data.overview}</p>
-      ${(data.timeline||[]).map(t=>`
-        <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="color:#f43f5e;font-size:11px;font-weight:700;min-width:48px">${t.time}</div>
-          <div><div style="font-size:13px;font-weight:700">${t.activity}</div>${t.tip?`<div style="font-size:11px;color:var(--subtext)">💡 ${t.tip}</div>`:''}</div>
-        </div>`).join('')}
-    </div>`;
-}
-
-async function aiRecommend(){
-  document.getElementById('recommend-result').innerHTML='<p style="color:var(--subtext);font-size:12px">✨ Finding perfect ideas for you...</p>';
-  const r=await fetch('/api/ai/recommend',{method:'POST',headers:{'Content-Type':'application/json'}});
-  const data=await r.json();
-  if(data.error||!Array.isArray(data)){document.getElementById('recommend-result').innerHTML='<p style="color:var(--subtext);font-size:12px">Log some dates first for personalized ideas!</p>';return;}
-  document.getElementById('recommend-result').innerHTML=data.map(i=>`
-    <div class="recommend-card">
-      <div style="display:flex;gap:10px;align-items:flex-start">
-        <span style="font-size:28px">${i.emoji||'✨'}</span>
-        <div style="flex:1">
-          <div style="font-weight:900;font-size:14px">${i.title}</div>
-          <div style="font-size:12px;color:var(--subtext)">${i.desc}</div>
-          <span class="reason-tag">💡 ${i.reason||'Recommended for you'}</span>
-        </div>
-        <button onclick='saveIdea(${JSON.stringify(i).replace(/"/g,"&quot;")})' style="background:none;border:none;font-size:18px;cursor:pointer">❤️</button>
-      </div>
-    </div>`).join('');
+  if(data.error){el.innerHTML='<div class="empty"><p>⚠️ AI unavailable.</p></div>';return;}
+  el.innerHTML=`<div class="surface">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:32px">${data.emoji||'🗓️'}</span>
+      <span style="background:#7c3aed;color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">${data.totalCost||''} • ${data.totalDuration||''}</span>
+    </div>
+    <div style="font-size:17px;font-weight:900;color:#f43f5e;margin-bottom:5px">${data.title}</div>
+    <div style="font-size:12px;color:var(--subtext);margin-bottom:12px">${data.overview}</div>
+    ${(data.timeline||[]).map(t=>`
+      <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="color:#f43f5e;font-size:11px;font-weight:700;min-width:50px">${t.time}</div>
+        <div><div style="font-size:13px;font-weight:700">${t.activity}</div>
+          ${t.tip?`<div style="font-size:11px;color:var(--subtext)">💡 ${t.tip}</div>`:''}</div>
+      </div>`).join('')}
+  </div>`;
 }
 
 async function findPlaces(){
   const city=document.getElementById('city-input').value.trim();
   if(!city)return;
-  document.getElementById('ai-result').innerHTML=`<div class="empty" style="padding:20px"><div>🗺️</div><p>Finding places in ${city}...</p></div>`;
+  const el=document.getElementById('ai-result');
+  el.innerHTML=`<div class="empty" style="padding:20px"><div>🗺️</div><p>Finding spots in ${city}...</p></div>`;
   const r=await fetch('/api/ai/places',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({city})});
   const data=await r.json();
-  if(data.error){document.getElementById('ai-result').innerHTML='<div class="empty"><p>⚠️ AI unavailable.</p></div>';return;}
-  document.getElementById('ai-result').innerHTML=`<div class="label">📍 Date Spots in ${city}</div>`+
-    data.map(p=>`
-      <div class="surface" style="display:flex;gap:10px;align-items:flex-start">
-        <span style="font-size:26px;flex-shrink:0">${p.emoji}</span>
-        <div style="flex:1">
-          <div style="display:flex;justify-content:space-between"><b style="font-size:13px">${p.name}</b><span style="color:var(--subtext);font-size:11px">${p.priceRange}</span></div>
-          <div style="font-size:10px;color:#0284c7">${p.type}</div>
-          <div style="font-size:12px;color:var(--subtext)">${p.desc}</div>
+  if(data.error){el.innerHTML='<div class="empty"><p>⚠️ AI unavailable.</p></div>';return;}
+  el.innerHTML='<div class="label">📍 Date Spots in '+city+'</div>'+data.map(p=>`
+    <div class="surface" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+      <span style="font-size:26px;flex-shrink:0">${p.emoji}</span>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between">
+          <b style="font-size:13px">${p.name}</b>
+          <span style="color:var(--subtext);font-size:11px">${p.priceRange}</span>
         </div>
-        <button onclick='saveIdea({title:"${p.name}",desc:"${p.desc}",emoji:"${p.emoji}",duration:"TBD",cost:"${p.priceRange}",cat:"city"})' style="background:none;border:none;font-size:18px;cursor:pointer">❤️</button>
-      </div>`).join('');
+        <div style="font-size:10px;color:#0284c7">${p.type}</div>
+        <div style="font-size:12px;color:var(--subtext)">${p.desc}</div>
+      </div>
+      <button onclick="saveIdea({title:'${p.name}',desc:'${p.desc}',emoji:'${p.emoji}',duration:'TBD',cost:'${p.priceRange}',cat:'city'})"
+        style="background:none;border:none;font-size:18px;cursor:pointer;flex-shrink:0">❤️</button>
+    </div>`).join('');
 }
 
 // ── Chat ───────────────────────────────────────────────────
@@ -1067,30 +938,26 @@ async function sendChat(){
   const r=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,lang})});
   const data=await r.json();
   document.getElementById('typing')?.remove();
-  box.innerHTML+=`<div class="chat-msg ai">${data.response||'Sorry, I could not respond right now.'}</div>`;
+  box.innerHTML+=`<div class="chat-msg ai">${data.response||'Sorry, could not respond right now.'}</div>`;
   box.scrollTop=box.scrollHeight;
 }
 
 // ── Stats ──────────────────────────────────────────────────
 function renderStats(){
   const total=history.length;
-  const avgRating=total?Math.round(history.reduce((a,h)=>a+(h.rating||5),0)/total*10)/10:0;
+  const avg=total?Math.round(history.reduce((a,h)=>a+(h.rating||5),0)/total*10)/10:0;
   const cats=history.map(h=>h.cat||'surprise');
-  const catCounts={};
-  cats.forEach(c=>catCounts[c]=(catCounts[c]||0)+1);
-  const favCat=Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0];
-  const totalSaved=saved.length;
+  const cc={};cats.forEach(c=>cc[c]=(cc[c]||0)+1);
+  const fav=Object.entries(cc).sort((a,b)=>b[1]-a[1])[0];
   document.getElementById('stat-grid').innerHTML=`
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Dates Logged</div></div>
-    <div class="stat-card"><div class="stat-num">${avgRating||'—'}</div><div class="stat-label">Avg Rating ⭐</div></div>
-    <div class="stat-card"><div class="stat-num">${totalSaved}</div><div class="stat-label">Ideas Saved</div></div>
-    <div class="stat-card"><div class="stat-num">${favCat?favCat[0]:'—'}</div><div class="stat-label">Fav Category</div></div>`;
-  document.getElementById('cat-stats').innerHTML=Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([cat,count])=>`
+    <div class="stat-card"><div class="stat-num">${avg||'—'}</div><div class="stat-label">Avg Rating ⭐</div></div>
+    <div class="stat-card"><div class="stat-num">${saved.length}</div><div class="stat-label">Ideas Saved</div></div>
+    <div class="stat-card"><div class="stat-num">${fav?fav[0]:'—'}</div><div class="stat-label">Fav Category</div></div>`;
+  document.getElementById('cat-stats').innerHTML=Object.entries(cc).sort((a,b)=>b[1]-a[1]).map(([cat,count])=>`
     <div style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
-        <span>${cat}</span><span>${count}</span>
-      </div>
-      <div class="stat-bar"><div class="stat-bar-fill" style="width:${Math.round(count/total*100)}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${cat}</span><span>${count}</span></div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${total?Math.round(count/total*100):0}%"></div></div>
     </div>`).join('')||'<p style="color:var(--subtext);font-size:12px">Log some dates to see stats!</p>';
   document.getElementById('rating-stats').innerHTML=history.slice(-5).reverse().map(h=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
@@ -1109,36 +976,37 @@ function renderHistory(){
         <span style="font-size:28px">${h.emoji||'📅'}</span>
         <div style="flex:1">
           <div style="font-weight:900;font-size:14px">${h.title}</div>
-          <div style="font-size:11px;color:var(--subtext)">${h.date}</div>
+          <div style="font-size:11px;color:var(--subtext)">${h.date||''}</div>
           <div style="color:#f59e0b;font-size:14px">${'⭐'.repeat(h.rating||5)}</div>
           ${h.note?`<div style="font-size:12px;color:var(--subtext);font-style:italic;margin-top:3px">"${h.note}"</div>`:''}
         </div>
-        <button onclick="removeHistory(${history.length-1-i})" style="background:none;border:none;color:var(--subtext);cursor:pointer;font-size:14px">✕</button>
+        <button onclick="history.splice(${history.length-1-i},1);renderHistory();updateNavBadges()"
+          style="background:none;border:none;color:var(--subtext);cursor:pointer;font-size:14px">✕</button>
       </div>
       ${h.photo?`<img src="${h.photo}" class="memory-photo" alt="Date photo">`:''}
     </div>`).join('');
 }
 
-function removeHistory(idx){ history.splice(idx,1); renderHistory(); updateNavBadges(); }
-
 // ── Saved ──────────────────────────────────────────────────
 function renderSaved(){
   const el=document.getElementById('saved-list');
   if(!saved.length){el.innerHTML='<div class="empty"><div>💔</div><p>No saved ideas yet!<br>Swipe 💚 to save.</p></div>';return;}
-  el.innerHTML=saved.map((s,i)=>`
-    <div class="card cat-${s.cat||'surprise'}">
+  el.innerHTML=saved.map((s,i)=>{
+    const ss=JSON.stringify(s).replace(/"/g,'&quot;');
+    return `<div class="card cat-${s.cat||'surprise'}" style="margin-bottom:10px">
       <div class="card-top"><span style="font-size:32px">${s.emoji}</span>
         <div class="card-meta"><div class="card-cost">${s.cost}</div><div>${s.duration}</div></div>
       </div>
-      <h2>${s.title}</h2><p>${s.desc}</p>
+      <div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:4px">${s.title}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.85)">${s.desc}</div>
       <div class="card-btns">
-        <button onclick="openLogModal(${i})">📖 ${t('log')}</button>
-        <button onclick='shareIdea(${JSON.stringify(s).replace(/"/g,"&quot;")})'>🔗 ${t('share')}</button>
-        <button onclick='addToCalendar(${JSON.stringify(s).replace(/"/g,"&quot;")})'>${t('add_to_calendar')}</button>
+        <button onclick="openLogModal(${i})">📖 Log</button>
+        <button onclick="shareIdea(JSON.parse(this.dataset.s))" data-s="${ss}">🔗 Share</button>
+        <button onclick="addToCalendar(JSON.parse(this.dataset.s))" data-s="${ss}">📅</button>
         <button onclick="saved.splice(${i},1);renderSaved();updateNavBadges()">🗑</button>
       </div>
-    </div>`).join('')+
-    `<button class="btn btn-gray" onclick="saved=[];renderSaved();updateNavBadges()">${t('clear_all')}</button>`;
+    </div>`;
+  }).join('')+`<button class="btn btn-gray" onclick="saved=[];renderSaved();updateNavBadges()">🗑 Clear All</button>`;
 }
 
 // ── Log Modal ──────────────────────────────────────────────
@@ -1153,8 +1021,8 @@ function openLogModal(idx){
     <div class="rating-btns">
       ${[1,2,3,4,5].map(n=>`<button class="rating-btn ${n===5?'selected':''}" onclick="selectRating(${n},this)">${'⭐'.repeat(n)}</button>`).join('')}
     </div>
-    <div class="label" style="margin-top:10px">Memory Note</div>
-    <textarea id="log-note" rows="3" placeholder="How did it go? Any special memories..."></textarea>
+    <div class="label" style="margin-top:10px">Note</div>
+    <textarea id="log-note" rows="3" placeholder="How did it go?"></textarea>
     <div class="label" style="margin-top:10px">📸 Add Photo</div>
     <input type="file" accept="image/*" onchange="handlePhoto(this)" style="font-size:12px;padding:6px">
     <img id="photo-preview" class="photo-preview">
@@ -1173,13 +1041,12 @@ function selectRating(n,btn){
 }
 
 function handlePhoto(input){
-  const file=input.files[0];
-  if(!file)return;
+  const file=input.files[0]; if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
     currentMemoryPhoto=e.target.result;
-    const preview=document.getElementById('photo-preview');
-    preview.src=currentMemoryPhoto; preview.style.display='block';
+    const p=document.getElementById('photo-preview');
+    p.src=currentMemoryPhoto; p.style.display='block';
   };
   reader.readAsDataURL(file);
 }
@@ -1187,28 +1054,26 @@ function handlePhoto(input){
 async function saveLog(modal){
   const note=document.getElementById('log-note').value;
   const mem={...currentMemoryIdea,note,rating:selectedRating,
-             date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
-             photo:currentMemoryPhoto||null};
+    date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+    photo:currentMemoryPhoto||null};
   history.push(mem);
-  if(currentUser){await fetch('/api/history',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mem)});}
+  if(currentUser) await fetch('/api/history',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mem)});
   modal.remove(); updateNavBadges(); showToast('Memory saved! 📖');
 }
 
 // ── Confetti ───────────────────────────────────────────────
 function showConfetti(){
-  const container=document.getElementById('confetti');
-  const colors=['#f43f5e','#a855f7','#3b82f6','#10b981','#f59e0b'];
+  const c=document.getElementById('confetti');
+  const cols=['#f43f5e','#a855f7','#3b82f6','#10b981','#f59e0b'];
   for(let i=0;i<50;i++){
     const p=document.createElement('div');
     p.className='confetti-piece';
-    p.style.cssText=`left:${Math.random()*100}%;top:-10px;background:${colors[i%5]};
-      width:${Math.random()*8+6}px;height:${Math.random()*8+6}px;
-      animation-delay:${Math.random()*0.5}s;animation-duration:${Math.random()*1+2}s`;
-    container.appendChild(p);
-    setTimeout(()=>p.remove(),3000);
+    p.style.cssText=`left:${Math.random()*100}%;top:-10px;background:${cols[i%5]};width:${Math.random()*8+6}px;height:${Math.random()*8+6}px;animation-delay:${Math.random()*.5}s;animation-duration:${Math.random()+2}s`;
+    c.appendChild(p); setTimeout(()=>p.remove(),3000);
   }
 }
 
+// ── Toast ──────────────────────────────────────────────────
 function showToast(msg){
   const t=document.createElement('div');
   t.className='toast'; t.textContent=msg;
@@ -1216,23 +1081,39 @@ function showToast(msg){
   setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},1800);
 }
 
-// ── Tab Navigation ─────────────────────────────────────────
+// ── Tabs ───────────────────────────────────────────────────
 function showTab(name,btn){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
-  btn.classList.add('active');
-  if(name==='saved')renderSaved();
-  if(name==='history')renderHistory();
-  if(name==='couples')renderMatches();
-  if(name==='stats')renderStats();
+  if(btn) btn.classList.add('active');
+  if(name==='saved') renderSaved();
+  if(name==='history') renderHistory();
+  if(name==='couples') renderMatches();
+  if(name==='stats') renderStats();
+  if(name==='seasonal') loadSeasonal();
 }
+
+// ── PWA ────────────────────────────────────────────────────
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  const banner=document.createElement('div');
+  banner.style.cssText='position:fixed;bottom:65px;left:0;right:0;margin:0 12px;background:#f43f5e;color:#fff;border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:400';
+  banner.innerHTML=`<div><div style="font-weight:900;font-size:14px">📱 Install DateSpark</div><div style="font-size:11px;opacity:.85">Add to your home screen!</div></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="deferredPrompt.prompt();this.closest('div[style*=fixed]').remove()" style="background:#fff;color:#f43f5e;border:none;border-radius:10px;padding:7px 12px;font-weight:900;font-size:12px;cursor:pointer">Install</button>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:10px;padding:7px 10px;font-size:12px;cursor:pointer">✕</button>
+    </div>`;
+  document.body.appendChild(banner);
+});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 </script>
 </body>
 </html>
 """
 
 if __name__ == "__main__":
-    print("\n💘 DateSpark AI — Ultimate Edition")
+    print("\n💘 DateSpark AI is running!")
     print("👉 Open your browser at: http://localhost:5000\n")
     app.run(debug=True, port=5000)
