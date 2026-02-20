@@ -168,13 +168,32 @@ def login():
         user = db.execute("SELECT * FROM users WHERE username=? AND password=?", (u, p)).fetchone()
         if not user: return jsonify({"error": "Invalid username or password"}), 401
         saved = [json.loads(r["idea"]) for r in db.execute("SELECT idea FROM saved_ideas WHERE username=? ORDER BY saved_at", (u,)).fetchall()]
-        history = [json.loads(r["memory"]) for r in db.execute("SELECT memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall()]
+        history = [{"id": r["id"], **json.loads(r["memory"])} for r in db.execute("SELECT id, memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall()]
     session["user"] = u
     return jsonify({"success": True, "username": u, "share_code": user["share_code"], "saved": saved, "history": history})
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.pop("user", None)
+    return jsonify({"success": True})
+
+@app.route("/api/history/delete", methods=["POST"])
+def delete_history():
+    u = session.get("user")
+    if not u: return jsonify({"error": "Not logged in"}), 401
+    memory_id = request.json.get("id")
+    with get_db() as db:
+        db.execute("DELETE FROM date_history WHERE id=? AND username=?", (memory_id, u))
+        db.commit()
+    return jsonify({"success": True})
+
+@app.route("/api/history/clear", methods=["POST"])
+def clear_history():
+    u = session.get("user")
+    if not u: return jsonify({"error": "Not logged in"}), 401
+    with get_db() as db:
+        db.execute("DELETE FROM date_history WHERE username=?", (u,))
+        db.commit()
     return jsonify({"success": True})
 
 @app.route("/api/ideas")
@@ -581,7 +600,10 @@ function enterApp(){
   document.getElementById('screen-auth').classList.remove('active');
   document.getElementById('main-nav').style.display='flex';
   document.getElementById('user-badge-area').innerHTML=currentUser
-    ?`<span style="background:#f43f5e22;color:#f43f5e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">👤 ${currentUser}</span>`
+    ?`<div style="display:flex;align-items:center;gap:6px">
+        <span style="background:#f43f5e22;color:#f43f5e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">👤 ${currentUser}</span>
+        <button class="icon-btn" onclick="logoutUser()" title="Logout" style="font-size:14px">🚪</button>
+      </div>`
     :`<button class="icon-btn" onclick="showAuthScreen()">🔑</button>`;
   document.getElementById('my-code').textContent=shareCode;
   init();
@@ -966,8 +988,36 @@ function renderStats(){
     </div>`).join('')||'<p style="color:var(--subtext);font-size:12px">No dates logged yet!</p>';
 }
 
+// ── Logout ─────────────────────────────────────────────────
+async function logoutUser(){
+  await fetch('/api/logout', {method:'POST'});
+  currentUser=null; saved=[]; history=[]; matches=[];
+  showAuthScreen();
+  showToast('Logged out! 👋');
+}
+
 // ── History ────────────────────────────────────────────────
-function renderHistory(){
+async function deleteMemory(idx){
+  const mem = history[idx];
+  if(currentUser && mem.id){
+    await fetch('/api/history/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id: mem.id})});
+  }
+  history.splice(idx, 1);
+  renderHistory();
+  updateNavBadges();
+  showToast('Memory deleted!');
+}
+
+async function clearAllHistory(){
+  if(!confirm('Delete all memories? This cannot be undone.')) return;
+  if(currentUser){
+    await fetch('/api/history/clear', {method:'POST'});
+  }
+  history=[];
+  renderHistory();
+  updateNavBadges();
+  showToast('All memories cleared!');
+}
   const el=document.getElementById('history-list');
   if(!history.length){el.innerHTML='<div class="empty"><div>📖</div><p>No memories yet!<br>Log a date from ❤️ Saved.</p></div>';return;}
   el.innerHTML=[...history].reverse().map((h,i)=>`
