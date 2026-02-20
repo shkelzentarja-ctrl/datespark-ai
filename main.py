@@ -817,7 +817,7 @@ function addToCalendar(idea){
   var title=encodeURIComponent('💘 '+(idea.title||''));
   var details=encodeURIComponent(idea.desc||'');
   var d=new Date();d.setDate(d.getDate()+7);
-  var ds=d.toISOString().replace(/-|:|[.]\d\d\d/g,'');
+  var ds=d.toISOString().replace(/-|:|[.][0-9][0-9][0-9]/g,'');
   window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text='+title+'&details='+details+'&dates='+ds+'/'+ds,'_blank');
 }
 
