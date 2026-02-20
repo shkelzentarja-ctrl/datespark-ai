@@ -1009,16 +1009,26 @@ function renderCatPills(){
 
 function setCat(cat, btn){
   activeCat = cat;
+  seenTitles = [];
+  isGenerating = false;
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
-  buildDeck(cat);
-  seenTitles = [];
+  // Rebuild deck from local IDEAS first
+  if(!IDEAS || !Object.keys(IDEAS).length){
+    console.error('IDEAS not loaded!');
+    return;
+  }
+  let all = Object.entries(IDEAS).flatMap(([c,arr]) => arr.map(i => ({...i, cat:c})));
+  deck = cat==='all' ? all : all.filter(i => i.cat === cat);
+  deck.sort(() => Math.random() - 0.5);
+  console.log(`Category: ${cat}, Deck size: ${deck.length}`);
   renderSwipeCards();
 }
 
 function reshuffleDeck(){
-  buildDeck(activeCat);
   seenTitles = [];
+  isGenerating = false;
+  buildDeck(activeCat);
   renderSwipeCards();
 }
 
@@ -1050,11 +1060,18 @@ function renderSwipeCards(){
 async function generateMoreIdeas(rerender=true){
   if(isGenerating) return;
   isGenerating = true;
+  // Use active category, not random
+  const catToGenerate = activeCat === 'all'
+    ? ['home','city','outdoor','budget','luxury','travel','surprise'][Math.floor(Math.random()*7)]
+    : activeCat;
   try {
     const r = await fetch('/api/ai/generate-ideas', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({cat: activeCat==='all'?['home','city','outdoor','budget','luxury','travel','surprise'][Math.floor(Math.random()*7)]:activeCat, exclude: seenTitles.slice(-20)})
+      body: JSON.stringify({
+        cat: catToGenerate,
+        exclude: seenTitles.slice(-20)
+      })
     });
     const data = await r.json();
     if(Array.isArray(data)){
@@ -1063,7 +1080,9 @@ async function generateMoreIdeas(rerender=true){
       deck.push(...newIdeas);
       if(rerender) renderSwipeCards();
     }
-  } catch(e){ console.log('Generate error:', e); }
+  } catch(e){
+    console.log('Generate error:', e);
+  }
   isGenerating = false;
 }
 
