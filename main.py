@@ -104,7 +104,19 @@ def call_gemini(prompt):
                 "generationConfig": {"temperature": 0.9, "maxOutputTokens": 1024}}
         r = requests.post(GEMINI_URL, json=body, timeout=30)
         txt = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return txt.replace("```json","").replace("```","").strip()
+        # Clean all possible markdown formatting
+        txt = txt.strip()
+        txt = txt.replace("```json", "").replace("```JSON", "")
+        txt = txt.replace("```", "").strip()
+        # Find JSON content between first [ or { and last ] or }
+        start = min(
+            txt.find('[') if txt.find('[') != -1 else len(txt),
+            txt.find('{') if txt.find('{') != -1 else len(txt)
+        )
+        end = max(txt.rfind(']'), txt.rfind('}')) + 1
+        if start < end:
+            txt = txt[start:end]
+        return txt
     except Exception as e:
         return None
 
