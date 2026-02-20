@@ -23,7 +23,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "datespark_secret_2024")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY_HERE")
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY
+    "gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY
 )
 
 # ── Date Ideas Data ──────────────────────────────────────────
