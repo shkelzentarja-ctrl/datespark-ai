@@ -611,9 +611,9 @@ function enterApp(){
 }
 
 function showAuthScreen(){
+  document.getElementById('main-nav').style.display='none';
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-auth').classList.add('active');
-  document.getElementById('main-nav').style.display='none';
 }
 
 // ── Init ───────────────────────────────────────────────────
@@ -992,7 +992,14 @@ function renderStats(){
 async function logoutUser(){
   await fetch('/api/logout', {method:'POST'});
   currentUser=null; saved=[]; history=[]; matches=[];
-  showAuthScreen();
+  // Reset auth form
+  document.getElementById('auth-username').value='';
+  document.getElementById('auth-password').value='';
+  document.getElementById('auth-error').style.display='none';
+  // Hide nav, show auth
+  document.getElementById('main-nav').style.display='none';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-auth').classList.add('active');
   showToast('Logged out! 👋');
 }
 
