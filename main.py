@@ -167,10 +167,18 @@ def login():
     with get_db() as db:
         user = db.execute("SELECT * FROM users WHERE username=? AND password=?", (u, p)).fetchone()
         if not user: return jsonify({"error": "Invalid username or password"}), 401
-        saved = [json.loads(r["idea"]) for r in db.execute("SELECT idea FROM saved_ideas WHERE username=? ORDER BY saved_at", (u,)).fetchall()]
-        history = [{"id": r["id"], **json.loads(r["memory"])} for r in db.execute("SELECT id, memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall()]
+        saved = [json.loads(r["idea"]) for r in db.execute(
+            "SELECT idea FROM saved_ideas WHERE username=? ORDER BY saved_at", (u,)).fetchall()]
+        history = []
+        for r in db.execute("SELECT id, memory FROM date_history WHERE username=? ORDER BY logged_at", (u,)).fetchall():
+            try:
+                mem = json.loads(r["memory"])
+                mem["id"] = r["id"]
+                history.append(mem)
+            except: pass
     session["user"] = u
-    return jsonify({"success": True, "username": u, "share_code": user["share_code"], "saved": saved, "history": history})
+    return jsonify({"success": True, "username": u, "share_code": user["share_code"],
+                    "saved": saved, "history": history})
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
@@ -582,16 +590,23 @@ async function submitAuth(){
   const u=document.getElementById('auth-username').value.trim();
   const p=document.getElementById('auth-password').value;
   const err=document.getElementById('auth-error');
+  err.style.display='none';
   if(!u||!p){err.textContent='Please fill in all fields';err.style.display='block';return;}
-  const r=await fetch(authMode==='login'?'/api/login':'/api/register',
-    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
-  const data=await r.json();
-  if(data.error){err.textContent=data.error;err.style.display='block';return;}
-  currentUser=data.username;
-  shareCode=data.share_code;
-  saved=data.saved||[];
-  history=data.history||[];
-  enterApp();
+  try {
+    const r=await fetch(authMode==='login'?'/api/login':'/api/register',
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const data=await r.json();
+    if(data.error){err.textContent=data.error;err.style.display='block';return;}
+    currentUser=data.username;
+    shareCode=data.share_code;
+    saved=data.saved||[];
+    history=data.history||[];
+    enterApp();
+  } catch(e) {
+    err.textContent='Connection error. Please try again.';
+    err.style.display='block';
+    console.error('Auth error:',e);
+  }
 }
 
 function continueGuest(){ currentUser=null; enterApp(); }
