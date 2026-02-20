@@ -533,8 +533,8 @@ nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .pills::-webkit-scrollbar{display:none}
 .pill{flex-shrink:0;padding:7px 12px;border-radius:20px;border:none;background:var(--input);color:var(--text);font-size:11px;font-weight:700;cursor:pointer}
 .pill.active{background:#f43f5e;color:#fff;transform:scale(1.05)}
-.swipe-area{position:relative;height:230px;margin-bottom:8px}
-.swipe-card{position:absolute;inset:0;border-radius:22px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none}
+.swipe-area{position:relative;height:260px;margin-bottom:8px}
+.swipe-card{position:absolute;inset:0;border-radius:22px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;cursor:grab;user-select:none;overflow:hidden}
 .swipe-card.back1{transform:scale(0.95) translateY(8px);opacity:.7;z-index:1;pointer-events:none}
 .swipe-card.back2{transform:scale(0.90) translateY(16px);opacity:.4;z-index:0;pointer-events:none}
 .swipe-card.front{z-index:2}
