@@ -347,6 +347,26 @@ def get_userdata():
     return jsonify({"saved": saved, "history": history, "share_code": user["share_code"]})
 
 # ── AI Routes ─────────────────────────────────────────────────
+@app.route("/api/translate-ideas", methods=["POST"])
+def translate_ideas():
+    d = request.json
+    ideas = d.get("ideas", [])
+    lang = d.get("lang", "en")
+    lang_names = {"es": "Spanish", "fr": "French", "de": "German"}
+    if lang == "en" or lang not in lang_names:
+        return jsonify(ideas)
+    lang_name = lang_names[lang]
+    prompt = (f'Translate these date ideas to {lang_name}. '
+              f'Only translate "title" and "desc" fields, keep all other fields exactly the same. '
+              f'Return ONLY a valid JSON array, no markdown: {json.dumps(ideas)}')
+    result = call_gemini(prompt)
+    if not result:
+        return jsonify(ideas)
+    try:
+        return jsonify(json.loads(result))
+    except:
+        return jsonify(ideas)
+
 @app.route("/api/ai/generate-ideas", methods=["POST"])
 def ai_generate_ideas():
     d = request.json
@@ -471,8 +491,8 @@ header{background:var(--surface);padding:12px 16px;display:flex;justify-content:
 header h1{font-size:18px;color:#f43f5e;font-weight:900}
 .header-right{display:flex;gap:8px;align-items:center}
 .icon-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:4px;border-radius:8px}
-nav{background:var(--surface);display:flex;border-top:1px solid var(--border);position:sticky;bottom:0;z-index:100;overflow-x:auto}
-nav button{flex:1;min-width:44px;padding:10px 2px;background:none;border:none;color:var(--subtext);font-size:16px;cursor:pointer;transition:color .2s;white-space:nowrap}
+nav{background:var(--surface);display:flex;border-top:1px solid var(--border);position:sticky;bottom:0;z-index:100;overflow-x:auto;height:58px}
+nav button{flex:1;min-width:44px;padding:12px 2px;background:none;border:none;color:var(--subtext);font-size:20px;cursor:pointer;transition:color .2s;white-space:nowrap}
 nav button.active{color:#f43f5e;border-top:2px solid #f43f5e}
 .screen{display:none;flex:1;flex-direction:column;padding:14px;gap:12px;overflow-y:auto;padding-bottom:80px}
 .screen.active{display:flex}
@@ -735,7 +755,7 @@ input:focus,textarea:focus{border-color:#f43f5e}
 
 <nav id="main-nav" style="display:none">
   <button onclick="showTab('spark',this)">⚡</button>
-  <button onclick="showTab('seasonal',this)" id="seasonal-tab-btn">🌸</button>
+  <button onclick="showTab('seasonal',this)" id="seasonal-tab-btn">🌺</button>
   <button onclick="showTab('couples',this)">💑</button>
   <button onclick="showTab('ai',this)">🤖</button>
   <button onclick="showTab('chat',this)">💬</button>
@@ -806,7 +826,38 @@ function toggleTheme(){
 }
 
 // ── Language ───────────────────────────────────────────────
-function setLang(l){ lang=l; applyTranslations(); }
+function setLang(l){
+  lang = l;
+  applyTranslations();
+  translateCurrentIdeas();
+}
+
+async function translateCurrentIdeas(){
+  if(lang === 'en'){
+    // Reset to original English ideas
+    buildDeck(activeCat);
+    renderSwipeCards();
+    return;
+  }
+  // Show loading on card area
+  const area = document.getElementById('swipe-area');
+  area.innerHTML = '<div class="empty"><div style="font-size:28px">🌍</div><p>Translating ideas...</p></div>';
+  // Translate current deck (first 6 cards)
+  const toTranslate = deck.slice(0, 6);
+  try {
+    const r = await fetch('/api/translate-ideas', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ideas: toTranslate, lang})
+    });
+    const translated = await r.json();
+    // Replace start of deck with translated versions
+    deck.splice(0, translated.length, ...translated);
+    renderSwipeCards();
+  } catch(e){
+    renderSwipeCards();
+  }
+}
 function applyTranslations(){
   // Header
   document.getElementById('app-title').textContent = t('title');
@@ -1096,7 +1147,7 @@ function addToCalendar(idea){
 async function loadSeasonal(){
   const r=await fetch('/api/seasonal');
   const {season,ideas}=await r.json();
-  const icons={winter:'❄️',spring:'🌸',summer:'☀️',autumn:'🍂'};
+  const icons={winter:'❄️',spring:'🌺',summer:'☀️',autumn:'🍂'};
   document.getElementById('seasonal-tab-btn').textContent=icons[season];
   document.getElementById('seasonal-header').innerHTML=`
     <div style="text-align:center;margin-bottom:12px">
@@ -1104,15 +1155,20 @@ async function loadSeasonal(){
       <h2 style="font-size:19px;font-weight:900;color:#f43f5e;margin:6px 0">${season.charAt(0).toUpperCase()+season.slice(1)} Dates</h2>
     </div>`;
   document.getElementById('seasonal-cards').innerHTML=ideas.map(i=>
-    `<div class="card cat-${i.cat}">
-       <div class="card-top"><span class="card-emoji">${i.emoji}</span>
-         <div class="card-meta"><div class="card-cost">${i.cost}</div><div>${i.duration}</div></div>
+    `<div class="card cat-${i.cat}" style="margin-bottom:12px">
+       <div class="card-top">
+         <span style="font-size:36px">${i.emoji}</span>
+         <div class="card-meta">
+           <div class="card-cost">${i.cost}</div>
+           <div style="color:rgba(255,255,255,0.7);font-size:11px">${i.duration}</div>
+         </div>
        </div>
-       <h2>${i.title}</h2><p>${i.desc}</p>
-       <div class="card-btns">
-         <button onclick='saveIdea(${JSON.stringify(i)})'>${t('save')}</button>
-         <button onclick='shareIdea(${JSON.stringify(i)})'>🔗 ${t('share')}</button>
-         <button onclick='addToCalendar(${JSON.stringify(i)})'>${t('add_to_calendar')}</button>
+       <h2 style="color:#fff!important;font-size:17px;font-weight:900;margin-bottom:5px">${i.title}</h2>
+       <p style="color:rgba(255,255,255,0.85)!important;font-size:12px;line-height:1.5">${i.desc}</p>
+       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+         <button onclick='saveIdea(${JSON.stringify(i)})' style="padding:6px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;cursor:pointer">${t('save')}</button>
+         <button onclick='shareIdea(${JSON.stringify(i)})' style="padding:6px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;cursor:pointer">🔗 ${t('share')}</button>
+         <button onclick='addToCalendar(${JSON.stringify(i)})' style="padding:6px 10px;border:none;border-radius:10px;background:rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:700;cursor:pointer">${t('add_to_calendar')}</button>
        </div>
      </div>`
   ).join('');
