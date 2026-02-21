@@ -114,6 +114,10 @@ def call_gemini(prompt):
 def index():
     return render_template_string(HTML)
 
+@app.route("/debug")
+def debug():
+    return f"Key: '{GEMINI_API_KEY[:8]}...' URL: {GEMINI_URL[:60]}" if GEMINI_API_KEY else "KEY IS EMPTY"
+
 @app.route("/api/ideas")
 def get_ideas():
     return jsonify(IDEAS)
