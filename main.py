@@ -104,7 +104,8 @@ def call_gemini(prompt):
                 "generationConfig": {"temperature": 0.9, "maxOutputTokens": 3000}}
         r = requests.post(GEMINI_URL, json=body, timeout=30)
         print(f"STATUS: {r.status_code}")
-        print(f"BODY: {r.text[:500]}")
+        if r.status_code == 429:
+            return "RATE_LIMITED"
         txt = r.json()["candidates"][0]["content"]["parts"][0]["text"]
         txt = txt.strip().replace("```json","").replace("```JSON","").replace("```","").strip()
         start = min(txt.find('[') if txt.find('[')!=-1 else len(txt),
@@ -144,6 +145,8 @@ def ai_quick():
     result = call_gemini(prompt)
     if not result:
         return jsonify({"error": "AI unavailable"}), 500
+    if result == "RATE_LIMITED":
+        return jsonify({"error": "Too many requests, please wait 1 minute and try again! ⏳"}), 429
     try:
         return jsonify(json.loads(result))
     except:
