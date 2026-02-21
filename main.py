@@ -162,6 +162,8 @@ def ai_itinerary():
     result = call_gemini(prompt)
     if not result:
         return jsonify({"error": "AI unavailable"}), 500
+    if result == "RATE_LIMITED":
+        return jsonify({"error": "Too many requests, please wait 1 minute and try again! ⏳"}), 429
     try:
         return jsonify(json.loads(result))
     except:
@@ -177,6 +179,8 @@ def ai_places():
     result = call_gemini(prompt)
     if not result:
         return jsonify({"error": "AI unavailable"}), 500
+    if result == "RATE_LIMITED":
+        return jsonify({"error": "Too many requests, please wait 1 minute and try again! ⏳"}), 429
     try:
         return jsonify(json.loads(result))
     except:
