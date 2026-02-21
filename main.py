@@ -101,12 +101,16 @@ def get_season():
 def call_gemini(prompt):
     try:
         body = {"contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.9, "maxOutputTokens": 1024}}
+                "generationConfig": {"temperature": 0.9, "maxOutputTokens": 3000}}
         r = requests.post(GEMINI_URL, json=body, timeout=30)
         txt = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return txt.replace("```json","").replace("```","").strip()
-    except Exception as e:
-        return None
+        txt = txt.strip().replace("```json","").replace("```JSON","").replace("```","").strip()
+        start = min(txt.find('[') if txt.find('[')!=-1 else len(txt),
+                    txt.find('{') if txt.find('{')!=-1 else len(txt))
+        end = max(txt.rfind(']'), txt.rfind('}')) + 1
+        if start < end: txt = txt[start:end]
+        return txt
+    except: return None
 
 # ── Routes ────────────────────────────────────────────────────
 
